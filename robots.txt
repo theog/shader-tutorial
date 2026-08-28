@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://theog.github.io/shader-tutorial/sitemap.xml

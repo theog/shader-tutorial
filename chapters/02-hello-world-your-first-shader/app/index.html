@@ -3,7 +3,35 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chapter 02: Hello World — Your First Shader — Shader Tutorial</title>
+    <title>Chapter 02: Hello World — 2D WebGL GLSL Shader Tutorial</title>
+    
+    <!-- SEO & Metadata -->
+    <meta name="description" content="Master GLSL uniform inputs (u_resolution, u_time, u_mouse), coordinate normalization, and smooth color gradient creation." />
+    <meta name="keywords" content="GLSL, WebGL, Shader Uniforms, u_resolution, u_time, u_mouse, Normalized Coordinates, Gradients" />
+    <meta name="author" content="Theo Galanakis" />
+    <link rel="canonical" href="https://theog.github.io/shader-tutorial/chapters/02-hello-world-your-first-shader/app/index.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Chapter 02: Hello World — 2D WebGL GLSL Shader Tutorial" />
+    <meta property="og:description" content="Interactive visual guide to GLSL uniforms, aspect ratio correction, and interactive color gradients." />
+    <meta property="og:url" content="https://theog.github.io/shader-tutorial/chapters/02-hello-world-your-first-shader/app/index.html" />
+    <meta property="og:site_name" content="2D Shader Tutorial" />
+
+    <!-- Schema.org JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "Chapter 02: Hello World — GLSL Shader Tutorial",
+      "description": "Learn how to use uniforms and coordinate spaces to build interactive, animated WebGL shaders.",
+      "url": "https://theog.github.io/shader-tutorial/chapters/02-hello-world-your-first-shader/app/index.html",
+      "author": { "@type": "Person", "name": "Theo Galanakis" },
+      "educationalLevel": "Beginner",
+      "programmingLanguage": "GLSL"
+    }
+    </script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -23,7 +51,14 @@
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <noscript>
+            <div style="padding: 24px; max-width: 800px; margin: 0 auto;">
+                <h1>Chapter 02: Hello World — Your First Shader</h1>
+                <p>Master GLSL uniform inputs, coordinate spaces, and interactive mouse-driven lighting.</p>
+            </div>
+        </noscript>
+    </div>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>

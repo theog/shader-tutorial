@@ -3,20 +3,62 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chapter 04: Colors {{CHAPTER_TITLE}} Color Spaces — Shader Tutorial</title>
+    <title>Chapter 04: Colors & Color Spaces — 2D WebGL GLSL Shader Tutorial</title>
+    
+    <!-- SEO & Metadata -->
+    <meta name="description" content="Explore RGB channel interpolation, HSB polar color wheels, and procedural cosine palettes by Inigo Quilez with interactive WebGL controls." />
+    <meta name="keywords" content="GLSL, WebGL, Color Spaces, HSB to RGB, Cosine Palettes, Inigo Quilez, mix, Polar Coordinates, Color Wheels" />
+    <meta name="author" content="Theo Galanakis" />
+    <link rel="canonical" href="https://theog.github.io/shader-tutorial/chapters/04-colors-color-spaces/app/index.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Chapter 04: Colors & Color Spaces — 2D WebGL GLSL Shader Tutorial" />
+    <meta property="og:description" content="Interactive guide to color mixing, HSB polar coordinates, and mathematical cosine palettes." />
+    <meta property="og:url" content="https://theog.github.io/shader-tutorial/chapters/04-colors-color-spaces/app/index.html" />
+    <meta property="og:site_name" content="2D Shader Tutorial" />
+
+    <!-- Schema.org JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "Chapter 04: Colors & Color Spaces — GLSL Shader Tutorial",
+      "description": "Learn color space transformations, HSB-to-RGB conversion, and procedural cosine palettes.",
+      "url": "https://theog.github.io/shader-tutorial/chapters/04-colors-color-spaces/app/index.html",
+      "author": { "@type": "Person", "name": "Theo Galanakis" },
+      "educationalLevel": "Intermediate",
+      "programmingLanguage": "GLSL"
+    }
+    </script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-            background: #1a1a2e;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
             color: #eaeaea;
             min-height: 100vh;
         }
         #root { min-height: 100vh; }
+        code {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            background: #161b22;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <noscript>
+            <div style="padding: 24px; max-width: 800px; margin: 0 auto;">
+                <h1>Chapter 04: Colors & Color Spaces</h1>
+                <p>Master RGB channel blending, HSB polar hue wheels, and procedural cosine palette generation.</p>
+            </div>
+        </noscript>
+    </div>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>

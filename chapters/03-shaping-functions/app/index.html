@@ -3,7 +3,50 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chapter 03: Shaping Functions — Shader Tutorial</title>
+    <title>Chapter 03: Shaping Functions — 2D WebGL GLSL Shader Tutorial</title>
+    
+    <!-- SEO & Metadata -->
+    <meta name="description" content="Master GLSL 1D and 2D shaping functions (step, smoothstep, pow, sin, fract, abs) with an interactive real-time WebGL shader editor and live function graph plotter." />
+    <meta name="keywords" content="GLSL, WebGL, Fragment Shader, Shaping Functions, smoothstep, step, pow, fract, abs, Book of Shaders, Computer Graphics, Creative Coding, 2D Shaders" />
+    <meta name="author" content="Theo Galanakis" />
+    <link rel="canonical" href="https://theog.github.io/shader-tutorial/chapters/03-shaping-functions/app/index.html" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Chapter 03: Shaping Functions — 2D WebGL GLSL Shader Tutorial" />
+    <meta property="og:description" content="Interactive visual guide to GLSL shaping functions: step(), smoothstep(), power curves, sine waves, fract(), and ping-pong waveforms." />
+    <meta property="og:url" content="https://theog.github.io/shader-tutorial/chapters/03-shaping-functions/app/index.html" />
+    <meta property="og:site_name" content="2D Shader Tutorial" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Chapter 03: Shaping Functions — 2D WebGL GLSL Shader Tutorial" />
+    <meta name="twitter:description" content="Interactive visual guide to GLSL shaping functions with live WebGL shader compilation and 1D graph visualizer." />
+
+    <!-- Schema.org JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "Chapter 03: Shaping Functions — GLSL Shader Tutorial",
+      "description": "Learn how to use mathematical transfer functions in GLSL fragment shaders including step, smoothstep, pow, sin, fract, and abs.",
+      "url": "https://theog.github.io/shader-tutorial/chapters/03-shaping-functions/app/index.html",
+      "author": {
+        "@type": "Person",
+        "name": "Theo Galanakis"
+      },
+      "educationalLevel": "Intermediate",
+      "programmingLanguage": "GLSL",
+      "about": [
+        "WebGL",
+        "Fragment Shaders",
+        "GLSL Shaping Functions",
+        "Computer Graphics",
+        "Procedural Generation"
+      ]
+    }
+    </script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -23,7 +66,32 @@
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <!-- Static fallback for crawlers & search engines before React mounts -->
+        <noscript>
+            <div style="padding: 24px; max-width: 800px; margin: 0 auto;">
+                <h1>Chapter 03: Shaping Functions — 2D WebGL GLSL Shader Tutorial</h1>
+                <p>
+                    Shaping functions are the fundamental mathematical building blocks of all procedural shader visuals. 
+                    Each function reshapes a continuous 0.0–1.0 scalar input into a non-linear curve.
+                </p>
+                <h2>Key GLSL Shaping Functions Covered:</h2>
+                <ul>
+                    <li><strong>step(edge, x)</strong>: Binary threshold cutoff for sharp silhouettes and borders.</li>
+                    <li><strong>smoothstep(edge0, edge1, x)</strong>: Cubic Hermite S-curve interpolation for smooth antialiased transitions.</li>
+                    <li><strong>pow(x, exponent)</strong>: Power curve for brightness expansion, compression, and gamma adjustment.</li>
+                    <li><strong>sin() / cos()</strong>: Continuous periodic trigonometric oscillations for wave motion.</li>
+                    <li><strong>fract()</strong>: Modulo fractional repetition for sawtooth waves and spatial tiling.</li>
+                    <li><strong>abs()</strong>: Fold symmetry and absolute value mirror reflections for triangle waveforms.</li>
+                </ul>
+                <p>
+                    Enable JavaScript in your browser to interact with the real-time WebGL shader editor and synchronized 1D function graph plotter.
+                </p>
+            </div>
+        </noscript>
+    </div>
+
+    <!-- Scripts -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
