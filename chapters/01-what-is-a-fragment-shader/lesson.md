@@ -1,186 +1,144 @@
-# Chapter 01: What Is a Fragment Shader?
+# Chapter 01: The GPU Architecture & Parallel Execution
 
 ## Overview
 
-Imagine a factory where a million workers each paint one tiny tile on a massive mosaic — simultaneously. No worker can see what the others are doing. Each one just gets told their position and produces a color. That's a fragment shader.
+Modern graphics programming requires a fundamental shift in how you design algorithms. When programming a CPU, you think sequentially: iterating through data structures, maintaining state in memory, and executing instructions step by step. 
 
-This chapter introduces the mental model you need before writing any shader code: how GPUs work differently from CPUs, what "parallel per-pixel" means, and the basic structure of the GLSL language you'll be writing in.
+On a **GPU (Graphics Processing Unit)**, execution is massively parallel. Instead of a few powerful processor cores executing loops, a GPU contains thousands of smaller arithmetic logic units (ALUs) running the exact same compiled program across millions of screen pixels simultaneously.
+
+This chapter breaks down the hardware architecture of fragment shaders, explains how the GPU rasterization pipeline operates, and establishes the mathematical principles of per-pixel computing in GLSL.
 
 ---
 
 ## Key Concepts
 
 | Concept | Description |
-|---------|-------------|
-| Fragment Shader | A small program that runs once per pixel, deciding its color |
-| GPU Parallelism | Thousands of shader instances run simultaneously, one per pixel |
-| `gl_FragCoord` | Built-in variable — the pixel's position in screen coordinates |
-| `gl_FragColor` | Built-in output — the RGBA color this pixel should be |
-| Normalized Coordinates | Remapping pixel position to 0.0–1.0 range for resolution independence |
-| GLSL | OpenGL Shading Language — C-like, typed, no loops over pixels needed |
+|---|---|
+| **Fragment / Pixel Stage** | The programmable pipeline stage responsible for computing the final color vector of each rasterized pixel |
+| **SIMD Architecture** | Single Instruction, Multiple Data — the hardware paradigm executing identical code across multiple threads concurrently |
+| **`gl_FragCoord`** | Built-in GPU read-only vector containing the window-relative coordinates $(x, y, z, 1/w)$ of the current fragment |
+| **`gl_FragColor`** | Built-in output register storing the four-component floating-point color vector $(\text{red}, \text{green}, \text{blue}, \text{alpha})$ |
+| **Coordinate Normalization** | Mapping raw pixel indices into a scale-invariant unit square $[0.0, 1.0]^2$ |
+| **GLSL Syntax** | The C-based shading language compiled directly into GPU machine code at runtime |
 
 ---
 
-## Lesson
+## Detailed Breakdown
 
-### The CPU vs GPU Mental Model
+### 1. Sequential CPU Processing vs. Parallel GPU Execution
 
-On a CPU, if you wanted to color a 800×600 image, you'd write something like:
+To understand why shaders exist, consider how a CPU renders a high-definition image $(1920 \times 1080 = 2,073,600 \text{ pixels})$:
 
 ```javascript
-// CPU approach: sequential, one pixel at a time
-for (let y = 0; y < 600; y++) {
-    for (let x = 0; x < 800; x++) {
-        pixels[y][x] = computeColor(x, y);
+// CPU Model: Iterative & Sequential
+for (let y = 0; y < 1080; y++) {
+    for (let x = 0; x < 1920; x++) {
+        framebuffer[y][x] = evaluateColor(x, y);
     }
 }
 ```
 
-That's 480,000 iterations, one after another. Even at GHz speeds, this is slow for real-time graphics.
+Even with multi-threading, evaluating over two million pixels sequentially at 60 frames per second requires over 124 million function executions per second. 
 
-A GPU flips this on its head. Instead of one worker doing 480,000 jobs sequentially, it launches 480,000 workers (threads) at once. Each worker runs the **same program** but with a different pixel coordinate. There's no loop. There's no concept of "the pixel next to me." Each thread is blind to the others.
+A GPU eliminates the outer loops entirely. Instead of looping through pixels, the GPU hardware launches **2,073,600 concurrent thread instances** across its compute units. Every thread runs the exact same fragment shader function simultaneously for its assigned pixel coordinate:
 
-Your fragment shader is that program — the instructions for a single worker.
+$$\text{Pixel Color} = f(\text{Coordinate}, \text{Time}, \text{Uniform Inputs})$$
 
-### The Rendering Pipeline (Simplified)
+Because every thread is isolated:
+- **No Shared Memory**: A pixel cannot read or modify the color computed by its neighboring pixel.
+- **Pure Functional Logic**: The output is determined entirely as a mathematical function of its inputs.
 
-The full GPU pipeline has many stages, but for 2D shaders, we only care about two:
+---
 
+### 2. The 2D Rasterization Pipeline
+
+In 2D shader environments (such as WebGL canvases), we supply the GPU with two simple triangles that form a full-screen quad covering the normalized viewport from $(-1.0, -1.0)$ to $(1.0, 1.0)$:
+
+```text
+[ Vertex Quad ] ──> [ GPU Rasterizer ] ──> [ Fragment Shader Threads ] ──> [ Display Buffer ]
+(-1,1)───(1,1)       Generates 2D pixels     Evaluates GLSL code per pixel    Final RGBA image
+  │   ╲   │         for the quad bounds     gl_FragCoord -> gl_FragColor
+(-1,-1)──(1,-1)
 ```
-Vertices → [Vertex Shader] → Triangles → Rasterization → [Fragment Shader] → Pixels
-```
 
-1. **Vertex Shader** — transforms geometry (positions of triangle corners)
-2. **Rasterization** — the GPU figures out which pixels each triangle covers
-3. **Fragment Shader** — for each covered pixel, your code decides the color
+The rasterizer determines every screen pixel bounded by this quad and dispatches an execution of your fragment shader for each one.
 
-In our tutorial apps, we draw a single full-screen rectangle (two triangles covering the entire canvas). That means the fragment shader runs for every pixel on screen — giving us a blank canvas to paint on with math.
+---
 
-### Your First Fragment Shader
+### 3. Anatomical Breakdown of a Fragment Shader
 
-Here's the absolute minimum:
+Here is a complete, minimal GLSL fragment shader:
 
 ```glsl
+// 1. Declare floating-point precision
 precision mediump float;
 
-void main() {
-    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-}
-```
-
-This outputs pure red for every pixel. `vec4(R, G, B, A)` — values from 0.0 to 1.0.
-
-Not very interesting. Let's use **position**:
-
-```glsl
-precision mediump float;
-
+// 2. Uniform input provided by the host application (canvas dimensions)
 uniform vec2 u_resolution;
 
+// 3. Execution entry point executed once per pixel
 void main() {
+    // 4. Compute normalized coordinates in range [0.0, 1.0]
     vec2 st = gl_FragCoord.xy / u_resolution.xy;
+
+    // 5. Assign RGBA output vector (Red = x, Green = y, Blue = 0, Alpha = 1)
     gl_FragColor = vec4(st.x, st.y, 0.0, 1.0);
 }
 ```
 
-Now each pixel gets a different color based on where it is:
-- Bottom-left (0,0) → black
-- Bottom-right (1,0) → red
-- Top-left (0,1) → green
-- Top-right (1,1) → yellow
+#### Line-by-Line Technical Analysis:
 
-This is the classic "hello world" of shaders — a red/green gradient. You'll see this everywhere.
-
-### Breaking Down the Syntax
-
-```glsl
-precision mediump float;       // Required: set floating-point precision
-```
-
-GLSL runs on hardware that offers different precision levels. `mediump` is the standard choice for fragment shaders — good enough for most 2D work and works on mobile.
-
-```glsl
-uniform vec2 u_resolution;     // Input from JavaScript: canvas width/height in pixels
-```
-
-A `uniform` is a value passed in from the outside (your JavaScript host). It's the same for every pixel — hence "uniform." Common uniforms:
-- `u_resolution` — canvas size in pixels
-- `u_time` — seconds since the shader started
-- `u_mouse` — cursor position in pixels
-
-```glsl
-vec2 st = gl_FragCoord.xy / u_resolution.xy;
-```
-
-`gl_FragCoord` is the pixel's position (in actual pixels, like 347.5, 201.5). Dividing by resolution normalizes it to 0.0–1.0 regardless of canvas size. We call this `st` by convention (like UV coordinates).
-
-```glsl
-gl_FragColor = vec4(st.x, st.y, 0.0, 1.0);
-```
-
-Output: the pixel's final color. That's it. No return statement needed — you write to this built-in variable.
-
-### GLSL Types You Need Now
-
-| Type | What it is | Example |
-|------|-----------|---------|
-| `float` | Single number | `0.5` |
-| `vec2` | Two floats | `vec2(0.5, 1.0)` |
-| `vec3` | Three floats (often RGB) | `vec3(1.0, 0.0, 0.5)` |
-| `vec4` | Four floats (often RGBA) | `vec4(1.0, 0.0, 0.5, 1.0)` |
-
-Vectors support **swizzling** — accessing components by name:
-```glsl
-vec4 color = vec4(0.2, 0.5, 0.8, 1.0);
-color.rgb   // vec3(0.2, 0.5, 0.8)
-color.xy    // vec2(0.2, 0.5)
-color.r     // 0.2 (same as color.x)
-```
-
-### The Constraints
-
-Fragment shaders have strict rules:
-
-1. **No shared state** — you can't read what another pixel computed
-2. **No persistent memory** — each frame starts fresh
-3. **No recursion** — the call stack is limited
-4. **No dynamic arrays** — memory is pre-allocated
-5. **No print/debug** — you debug by outputting color (more on this in the appendix)
-
-These constraints exist because thousands of instances run in parallel. But they also force elegant solutions — you'll learn to think in pure functions of position and time.
-
-### Adding Time
-
-```glsl
-precision mediump float;
-
-uniform vec2 u_resolution;
-uniform float u_time;
-
-void main() {
-    vec2 st = gl_FragCoord.xy / u_resolution.xy;
-
-    // Oscillate blue channel with time
-    float blue = 0.5 + 0.5 * sin(u_time);
-
-    gl_FragColor = vec4(st.x, st.y, blue, 1.0);
-}
-```
-
-Now the shader animates — the blue channel pulses as time passes. Every pixel still runs independently, but they all read the same `u_time` value, creating coherent animation.
+1. **`precision mediump float;`**: Tells the GPU shader compiler how many bits of precision to allocate for floating-point calculations (`lowp` = 8-10 bits, `mediump` = 16 bits, `highp` = 32 bits). `mediump` provides great performance and broad cross-platform compatibility across mobile and desktop GPUs.
+2. **`uniform vec2 u_resolution;`**: A **uniform** is a read-only variable passed from the host application (JavaScript/WebGL) into the shader. It remains constant across all pixel threads during a single draw call.
+3. **`gl_FragCoord.xy / u_resolution.xy`**: `gl_FragCoord` contains the physical pixel coordinate (e.g. $x=640.5, y=360.5$). Dividing by the canvas width and height normalizes the domain into a clean $[0.0, 1.0]$ coordinate space.
+4. **`gl_FragColor = vec4(...)`**: The output target register. In WebGL 1.0, writing to `gl_FragColor` sends the final clamped floating-point color $(R, G, B, A)$ to the graphics framebuffer.
 
 ---
 
-## Exercises
+### 4. Essential GLSL Types and Vector Swizzling
 
-1. **Modify the gradient** — Change the hello-world shader so red increases from top to bottom instead of left to right (hint: swap which component uses `st.x` vs `st.y`)
-2. **Single color pulse** — Make the entire screen pulse between black and white using `sin(u_time)`
-3. **Diagonal gradient** — Create a gradient that goes from black (bottom-left corner) to white (top-right corner) using `(st.x + st.y) / 2.0`
+GLSL is strongly typed with hardware-accelerated vector mathematics:
+
+| Type | Components | Use Cases | Example |
+|---|---|---|---|
+| `float` | 1 scalar float | Coordinates, angles, time scalars | `float t = 1.5;` |
+| `vec2` | 2D vector | 2D screen positions, UV coordinates | `vec2 pos = vec2(0.5, 1.0);` |
+| `vec3` | 3D vector | 3D normals, RGB colors | `vec3 rgb = vec3(1.0, 0.5, 0.0);` |
+| `vec4` | 4D vector | RGBA colors, homogeneous coordinates | `vec4 color = vec4(rgb, 1.0);` |
+
+#### Vector Swizzling:
+GLSL allows arbitrary reordering and extraction of vector components using property accessors:
+```glsl
+vec4 data = vec4(1.0, 2.0, 3.0, 4.0);
+
+vec2 xy = data.xy;    // vec2(1.0, 2.0)
+vec3 rgb = data.rgb;  // vec3(1.0, 2.0, 3.0)
+vec3 bgr = data.bgr;  // vec3(3.0, 2.0, 1.0) - channel inversion!
+vec4 dup = data.xxxx; // vec4(1.0, 1.0, 1.0, 1.0)
+```
 
 ---
 
-## Summary
+### 5. Architectural Constraints of the GPU
 
-A fragment shader is a tiny program that runs per-pixel in parallel on the GPU. It receives position (`gl_FragCoord`) and uniform inputs (`u_resolution`, `u_time`, `u_mouse`), and outputs a color (`gl_FragColor`). The key mental shift: you don't loop over pixels — you write the logic for one pixel, and the GPU runs it for all of them simultaneously.
+Because thousands of threads run concurrently at hardware clock speeds, fragment shaders operate under specific design constraints:
 
-**Next up:** [Chapter 02: Hello World — Your First Shader](../02-hello-world-your-first-shader/lesson.md)
+1. **No Cross-Thread Communication**: You cannot query the color or calculation of an adjacent pixel. All spatial patterns must be derived mathematically from `gl_FragCoord`.
+2. **Stateless per Frame**: Fragment shaders do not retain variables from the previous frame unless explicitly passed via textures or framebuffers.
+3. **Branching Cost**: Conditional statements (`if/else`) that diverge across adjacent threads can serialize execution on SIMD warps. Branchless mathematical formulations (`step`, `mix`, `clamp`) are preferred.
+
+---
+
+## Practical Exercises
+
+1. **Inverted Vertical Gradient**: Modify the initial shader so that the Red channel transitions from `1.0` at the top of the canvas to `0.0` at the bottom (Hint: `1.0 - st.y`).
+2. **Four-Quadrant Checker**: Use `step(0.5, st.x)` and `step(0.5, st.y)` to divide the screen into four distinct color quadrants.
+3. **Pulsing Monochrome**: Multiply the output `vec3(st.x)` by `0.5 + 0.5 * sin(u_time)` to create a pulsing luminance wave.
+
+---
+
+## Key Takeaways
+
+- Fragment shaders replace sequential loops with **massively parallel per-pixel mathematical evaluation**.
+- Normalizing coordinates via `gl_FragCoord.xy / u_resolution.xy` makes shader logic resolution-independent.
+- Shaders are pure mathematical mapping functions from coordinate space $(x, y)$ to color space $(r, g, b, a)$.

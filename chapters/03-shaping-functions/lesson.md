@@ -1,49 +1,31 @@
-# Chapter 03: Shaping Functions
+# Chapter 03: Mathematical Shaping & Continuous Transfer Functions
 
 ## Overview
 
-If shaders are painting, then shaping functions are your brushstrokes. Every visual effect you'll build — soft edges, hard borders, glowing pulses, curved transitions — comes from choosing the right mathematical function to transform a value.
+In procedural rendering, all visual form is generated from mathematical functions. Before you can render complex 2D shapes, organic noise, or lighting falloffs, you must master the art of **1D scalar transfer functions**: taking a continuous input value $x \in [0.0, 1.0]$ and reshaping it through an analytical equation $y = f(x)$.
 
-This chapter is the "wax on, wax off" of shader development. You'll learn to see functions as visual tools: `step()` is a knife edge, `smoothstep()` is a soft brush, `pow()` bends curves, and `sin()` creates rhythm. Master these and everything else becomes composition.
+Transfer functions allow you to control edge sharpness, non-linear brightness curves, rhythmic oscillations, and spatial symmetry. This chapter examines the mathematical formulations of core GLSL shaping functions and demonstrates how to compose them into sophisticated visual effects.
 
 ---
 
 ## Key Concepts
 
-| Concept | Description |
-|---------|-------------|
-| `step(edge, x)` | Hard cutoff: returns 0.0 if x < edge, 1.0 if x >= edge |
-| `smoothstep(a, b, x)` | Smooth transition: 0.0 below a, 1.0 above b, S-curve between |
-| `pow(x, n)` | Power curve: bends linear ramps into exponential/logarithmic shapes |
-| `sin()` / `cos()` | Oscillation: periodic waves for animation and repetition |
-| `fract()` | Fractional part: creates sawtooth waves and repetition |
-| `clamp(x, min, max)` | Constrains a value to a range |
-| `abs()` | Absolute value: mirrors negative values to positive |
-| Function composition | Combining simple functions to build complex curves |
+| Function | Mathematical Definition | Visual Effect |
+|---|---|---|
+| **`step(edge, x)`** | $f(x) = \begin{cases} 0.0 & x < \text{edge} \\ 1.0 & x \ge \text{edge} \end{cases}$ | Hard binary cutoff / sharp silhouette border |
+| **`smoothstep(e0, e1, x)`** | $t = \text{clamp}\left(\frac{x - e_0}{e_1 - e_0}, 0, 1\right), \quad 3t^2 - 2t^3$ | Cubic S-curve transition / antialiased edge |
+| **`pow(x, \gamma)`** | $f(x) = x^\gamma$ | Exponential curve / contrast expansion & compression |
+| **`fract(x)`** | $f(x) = x - \lfloor x \rfloor$ | Periodic sawtooth ramp / spatial tiling foundation |
+| **`abs(x)`** | $f(x) = |x|$ | Bilateral fold reflection / V-shape mirror symmetry |
+| **`clamp(x, min, max)`** | $f(x) = \min(\max(x, \text{min}), \text{max})$ | Boundary constraint preventing numerical overflow |
 
 ---
 
-## Lesson
+## Detailed Breakdown
 
-### Thinking in 1D Before 2D
+### 1. The Heaviside Step Function (`step`)
 
-Before you draw shapes on a 2D canvas, you need to master 1D shaping — taking a value that goes from 0 to 1 (like `st.x`) and transforming it into a different curve. That transformed value becomes brightness, an edge, a color blend factor, or an animation timing.
-
-Think of it this way:
-- **Input**: a linear ramp from 0 to 1 (position, time, distance — anything)
-- **Output**: a shaped value (still typically 0 to 1, but with a different curve)
-
-The interactive app for this chapter plots these functions as graphs so you can see their shape.
-
-### step() — The Hard Edge
-
-```glsl
-float result = step(edge, x);
-// Returns: 0.0 if x < edge
-//          1.0 if x >= edge
-```
-
-`step()` is a binary switch. Everything below the threshold is 0, everything above is 1. No in-between.
+The `step()` function is the graphics equivalent of an instantaneous digital logic switch. It evaluates without conditional CPU branching, making it execution-efficient on GPU SIMD cores:
 
 ```glsl
 precision mediump float;
@@ -52,28 +34,22 @@ uniform vec2 u_resolution;
 void main() {
     vec2 st = gl_FragCoord.xy / u_resolution.xy;
 
-    // Hard split at x = 0.5
-    // Left half = black (0.0), right half = white (1.0)
-    float value = step(0.5, st.x);
+    // Everything left of x = 0.5 is 0.0 (Black); right of 0.5 is 1.0 (White)
+    float mask = step(0.5, st.x);
 
-    gl_FragColor = vec4(vec3(value), 1.0);
+    gl_FragColor = vec4(vec3(mask), 1.0);
 }
 ```
 
-Use `step()` when you want crisp borders: inside/outside, on/off, visible/invisible.
+While useful for hard masks, `step()` produces jagged, pixelated staircase artifacts on diagonal lines because pixels are either 100% on or 100% off with no intermediate values.
 
-**Key insight**: `step(edge, x)` is equivalent to `x >= edge ? 1.0 : 0.0` — but it's branchless on GPU hardware, making it fast.
+---
 
-### smoothstep() — The Soft Transition
+### 2. Cubic Hermite Interpolation (`smoothstep`)
 
-```glsl
-float result = smoothstep(edge0, edge1, x);
-// Returns: 0.0 if x <= edge0
-//          1.0 if x >= edge1
-//          Smooth S-curve interpolation between
-```
+To eliminate aliasing and create organic transitions, GLSL provides `smoothstep(edge0, edge1, x)`. It computes a continuous cubic polynomial that transitions smoothly between two thresholds with zero velocity at both endpoints:
 
-`smoothstep()` is the workhorse of shader graphics. It gives you anti-aliased edges, soft gradients, and controllable transitions.
+$$f(t) = 3t^2 - 2t^3 \quad \text{where } t = \text{clamp}\left(\frac{x - \text{edge}_0}{\text{edge}_1 - \text{edge}_0}, 0.0, 1.0\right)$$
 
 ```glsl
 precision mediump float;
@@ -82,39 +58,57 @@ uniform vec2 u_resolution;
 void main() {
     vec2 st = gl_FragCoord.xy / u_resolution.xy;
 
-    // Soft transition from 0.3 to 0.7
-    // Below 0.3 = black, above 0.7 = white
-    // Between = smooth curve
-    float value = smoothstep(0.3, 0.7, st.x);
+    // Smooth gradient band between 0.3 and 0.7
+    float smoothMask = smoothstep(0.3, 0.7, st.x);
 
-    gl_FragColor = vec4(vec3(value), 1.0);
+    gl_FragColor = vec4(vec3(smoothMask), 1.0);
 }
 ```
 
-The width of the transition (edge1 - edge0) controls the softness:
-- Wide gap (e.g., 0.0 to 1.0) → very gradual
-- Narrow gap (e.g., 0.49 to 0.51) → nearly as sharp as `step()`
-- `smoothstep(a, a, x)` → identical to `step(a, x)`
-
-**Making a line from smoothstep**: Subtract two smoothsteps to create a band:
-
+#### Analytical Edge Anti-Aliasing:
+By narrowing the width of `smoothstep` to approximately the width of a single physical pixel, you achieve mathematically perfect antialiasing:
 ```glsl
-// A soft band (line) around y = 0.5
-float line = smoothstep(0.45, 0.5, st.x) - smoothstep(0.5, 0.55, st.x);
+float pixelWidth = 1.0 / u_resolution.x;
+float antiAliasedEdge = smoothstep(0.5 - pixelWidth, 0.5 + pixelWidth, st.x);
 ```
 
-### pow() — Bending the Curve
+---
+
+### 3. Power Curves (`pow`) and Gamma Shaping
+
+Power functions bend linear ramps into exponential or logarithmic curves:
+- **$\gamma > 1.0$ (e.g. $x^2, x^3$)**: Compresses dark values, producing a steep rise near 1.0 (deep shadows, tight highlights).
+- **$\gamma < 1.0$ (e.g. $x^{0.5}, x^{0.33}$)**: Expands dark values, producing rapid initial growth (diffuse ambient lighting, softened contrast).
 
 ```glsl
-float result = pow(x, exponent);
-// x^exponent — reshapes the linear ramp
+float darkCurve = pow(st.x, 3.0); // Slow start, dramatic rise
+float brightCurve = pow(st.x, 0.33); // Rapid start, plateauing top
 ```
 
-When x goes from 0 to 1:
-- `pow(x, 1.0)` → linear (no change)
-- `pow(x, 2.0)` → quadratic (slow start, fast end)
-- `pow(x, 0.5)` → square root (fast start, slow end)
-- `pow(x, 5.0)` → very steep at end (concentrates values near 0)
+---
+
+### 4. Periodic Waveforms with `fract` and `abs`
+
+Combining fractional and absolute value functions transforms linear coordinate ramps into periodic waveforms without trigonometric computation cost:
+
+#### A. Sawtooth Wave (`fract`):
+`fract(x)` extracts the fractional part $x - \lfloor x \rfloor$, creating repeating $0.0 \to 1.0$ ramps:
+```glsl
+float sawtooth = fract(st.x * 5.0); // 5 repeating ramps
+```
+
+#### B. Triangle Wave (Ping-Pong):
+Reflecting the sawtooth wave with `abs()` generates a continuous linear bounce between $0.0$ and $1.0$:
+```glsl
+// Remap [0..1] -> [-1..+1] -> mirror -> [0..1]
+float triangleWave = abs(fract(st.x * 4.0) * 2.0 - 1.0);
+```
+
+---
+
+### 5. Function Composition: Building a Gaussian-Style Pulse
+
+Complex shapes are built by adding, multiplying, or subtracting elemental shaping functions. For example, subtracting two offset `smoothstep` curves constructs an isolated smooth light pulse:
 
 ```glsl
 precision mediump float;
@@ -123,182 +117,31 @@ uniform vec2 u_resolution;
 void main() {
     vec2 st = gl_FragCoord.xy / u_resolution.xy;
 
-    // Compare: linear vs pow curves
-    // The exponent reshapes brightness distribution
-    float linear = st.x;
-    float squared = pow(st.x, 2.0);
-    float rooted = pow(st.x, 0.5);
+    float center = 0.5;
+    float width = 0.15;
 
-    // Use Y position to show different curves:
-    float value;
-    if (st.y > 0.66) {
-        value = rooted;      // top third: sqrt (bright)
-    } else if (st.y > 0.33) {
-        value = linear;      // middle: linear
-    } else {
-        value = squared;     // bottom: squared (dark)
-    }
+    // Left rising edge minus right falling edge = isolated bell pulse
+    float pulse = smoothstep(center - width, center, st.x)
+                - smoothstep(center, center + width, st.x);
 
-    gl_FragColor = vec4(vec3(value), 1.0);
-}
-```
-
-**Use cases**: Gamma correction, easing animations, controlling contrast.
-
-### sin() and cos() — Rhythm and Oscillation
-
-```glsl
-float wave = sin(x);
-// Oscillates between -1 and 1
-// Period = 2*PI (about 6.28)
-```
-
-For shader work, you almost always remap sin to 0–1:
-
-```glsl
-float wave01 = 0.5 + 0.5 * sin(x);  // Now oscillates 0 to 1
-```
-
-Control the frequency by multiplying the input:
-```glsl
-sin(x * 2.0)         // Twice as fast
-sin(x * PI)          // One full cycle per unit
-sin(x * 10.0)        // Ten cycles per unit
-```
-
-Control the phase (offset) by adding:
-```glsl
-sin(x + u_time)      // Shifts over time (animation!)
-sin(x + PI * 0.5)    // Same as cos(x)
-```
-
-```glsl
-precision mediump float;
-uniform vec2 u_resolution;
-uniform float u_time;
-
-#define PI 3.14159265359
-
-void main() {
-    vec2 st = gl_FragCoord.xy / u_resolution.xy;
-
-    // Animated sine wave stripes
-    float frequency = 10.0;
-    float wave = 0.5 + 0.5 * sin(st.x * frequency * PI + u_time * 3.0);
-
-    gl_FragColor = vec4(vec3(wave), 1.0);
-}
-```
-
-### fract() — The Sawtooth
-
-```glsl
-float result = fract(x);
-// Returns the fractional part: fract(2.7) = 0.7, fract(0.3) = 0.3
-```
-
-`fract()` creates a sawtooth wave — the value rises from 0 to 1, then snaps back to 0, repeatedly. It's the foundation of tiling and repetition (Chapter 08) but also useful for shaping:
-
-```glsl
-// Five sawtooth ramps across the screen
-float saw = fract(st.x * 5.0);
-
-// Combine with smoothstep for repeated soft pulses
-float pulse = smoothstep(0.0, 0.5, saw) - smoothstep(0.5, 1.0, saw);
-```
-
-### abs() — The Mirror
-
-```glsl
-float result = abs(x);
-// Mirrors negatives: abs(-0.3) = 0.3, abs(0.3) = 0.3
-```
-
-Useful for centered effects. If you center your coordinates to -1..+1, then `abs(st.x)` gives you a V-shape — symmetric around the center:
-
-```glsl
-vec2 st = gl_FragCoord.xy / u_resolution.xy * 2.0 - 1.0;
-float v = 1.0 - abs(st.x);  // Peak at center, falls to edges
-```
-
-### Composing Functions
-
-The real power comes from combining these primitives. A few patterns:
-
-**Pulse/bump** (useful for highlighting a specific value):
-```glsl
-// Gaussian-like bump centered at 0.5, width controlled by 'w'
-float bump = smoothstep(0.5 - w, 0.5, x) - smoothstep(0.5, 0.5 + w, x);
-```
-
-**Ease-in / ease-out** (for animation):
-```glsl
-float easeIn = pow(t, 2.0);           // Slow start
-float easeOut = 1.0 - pow(1.0 - t, 2.0);  // Slow end
-float easeInOut = smoothstep(0.0, 1.0, t); // Both
-```
-
-**Stepped gradient** (posterization):
-```glsl
-float steps = floor(x * 5.0) / 5.0;  // 5 discrete levels
-```
-
-**Ping-pong** (triangle wave — bounce between 0 and 1):
-```glsl
-float pingpong = abs(fract(x) * 2.0 - 1.0);
-```
-
-### Visualizing Functions as Graphs
-
-A common debugging and learning technique: draw the function as a curve on screen:
-
-```glsl
-precision mediump float;
-uniform vec2 u_resolution;
-uniform float u_time;
-
-#define PI 3.14159265359
-
-// Plot a line on Y
-float plot(vec2 st, float y) {
-    return smoothstep(y - 0.02, y, st.y) - smoothstep(y, y + 0.02, st.y);
-}
-
-void main() {
-    vec2 st = gl_FragCoord.xy / u_resolution.xy;
-
-    // The function to visualize
-    float y = smoothstep(0.2, 0.8, st.x);
-
-    // Background: show the value as brightness
-    vec3 color = vec3(y);
-
-    // Overlay: draw the curve as a green line
-    float line = plot(st, y);
-    color = mix(color, vec3(0.0, 1.0, 0.0), line);
+    vec3 color = vec3(pulse) * vec3(0.2, 0.8, 1.0); // Tinted cyan
 
     gl_FragColor = vec4(color, 1.0);
 }
 ```
 
-This pattern — background shows the value as grayscale, green line traces the curve — is used throughout The Book of Shaders and in our interactive app.
+---
+
+## Practical Exercises
+
+1. **Symmetric Vignette**: Build a radial vignette falloff that darkens the canvas corners using `1.0 - smoothstep(0.4, 0.8, length(st - vec2(0.5)))`.
+2. **Double Pulse Wave**: Combine two pulse equations with different widths and centers to produce a double-peak waveform.
+3. **Step Staircase**: Use `floor(st.x * 5.0) / 4.0` to quantize a continuous gradient into 5 discrete stepped brightness levels.
 
 ---
 
-## Exercises
+## Key Takeaways
 
-1. **Step staircase** — Use `floor(st.x * 8.0) / 8.0` to create 8 discrete brightness levels across the screen. Then try 4, 16, 32 levels.
-
-2. **Smooth pulse** — Create a bright band (pulse) at `st.x = 0.5` using two `smoothstep()` calls subtracted from each other. Control the width.
-
-3. **Bouncing ball curve** — Use `abs(sin(u_time * 3.0))` as brightness to simulate a bouncing-ball ease (fast at bottom, slow at top). Combine with position to show the curve across the screen.
-
-4. **Custom easing** — Implement an ease-in-out-back curve: `t * t * (3.0 - 2.0 * t)` (this is what smoothstep uses internally). Compare it to a linear ramp visually.
-
----
-
-## Summary
-
-Shaping functions are the vocabulary of shader graphics. `step()` creates hard edges, `smoothstep()` creates soft ones, `pow()` bends curves, `sin()`/`cos()` add rhythm, `fract()` creates repetition, and `abs()` creates symmetry. By composing these simple pieces, you can build any transition, edge, or animation curve you need. Master them in 1D — they'll carry directly into 2D shapes, patterns, and noise.
-
-**Next up:** [Chapter 04: Color](../04-color/lesson.md)
+- 1D scalar shaping functions are the **atomic building blocks** of all procedural rendering.
+- `smoothstep` provides continuous cubic transitions essential for smooth blending and hardware antialiasing.
+- Modulo arithmetic (`fract`) and spatial reflection (`abs`) allow you to construct infinite periodic waveforms with zero trigonometric overhead.
