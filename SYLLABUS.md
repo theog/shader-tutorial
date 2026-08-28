@@ -3,7 +3,7 @@
 A guided, hands-on tutorial for learning fragment shaders with a focus on 2D techniques.
 Each chapter includes a written lesson, an interactive WebGL playground (HTML/JS/React), and a quiz.
 
-Based on concepts from [The Book of Shaders](https://thebookofshaders.com/) by Patricio Gonzalez Vivo.
+An original interactive tutorial curriculum inspired by [The Book of Shaders](https://thebookofshaders.com/) by Patricio Gonzalez Vivo & Jen Lowe.
 
 ---
 

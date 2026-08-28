@@ -1,6 +1,6 @@
 # 2D Shader Tutorial & Interactive Companion
 
-An interactive, browser-based tutorial series for learning 2D fragment shaders (GLSL), based on concepts from [The Book of Shaders](https://thebookofshaders.com/) by Patricio Gonzalez Vivo.
+An interactive, browser-based tutorial series for learning 2D fragment shaders (GLSL), inspired by [The Book of Shaders](https://thebookofshaders.com/) by Patricio Gonzalez Vivo & Jen Lowe.
 
 Every chapter includes:
 - 🎮 **Interactive WebGL Playground** (Live GLSL code editor, real-time compilation, uniform controls, preset examples)
