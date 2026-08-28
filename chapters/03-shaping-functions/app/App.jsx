@@ -213,14 +213,14 @@ const PRESETS = [
         graphLabel: 'step(edge, x)',
         params: { edge: 0.5 },
         sliders: [{ key: 'edge', label: 'Edge threshold', min: 0, max: 1 }],
-        code: `precision mediump float;
+        getCode: (p) => `precision mediump float;
 uniform vec2 u_resolution;
 
 void main() {
     vec2 st = gl_FragCoord.xy / u_resolution.xy;
 
     // step(edge, x): returns 0 below, 1 above
-    float value = step(0.5, st.x);
+    float value = step(${Number(p.edge).toFixed(3)}, st.x);
 
     gl_FragColor = vec4(vec3(value), 1.0);
 }`
@@ -238,7 +238,7 @@ void main() {
             { key: 'edge0', label: 'Edge 0 (start)', min: 0, max: 1 },
             { key: 'edge1', label: 'Edge 1 (end)', min: 0, max: 1 },
         ],
-        code: `precision mediump float;
+        getCode: (p) => `precision mediump float;
 uniform vec2 u_resolution;
 
 void main() {
@@ -246,7 +246,7 @@ void main() {
 
     // smoothstep(edge0, edge1, x)
     // Soft transition from edge0 to edge1
-    float value = smoothstep(0.3, 0.7, st.x);
+    float value = smoothstep(${Number(p.edge0).toFixed(3)}, ${Number(p.edge1).toFixed(3)}, st.x);
 
     gl_FragColor = vec4(vec3(value), 1.0);
 }`
@@ -258,7 +258,7 @@ void main() {
         graphLabel: 'pow(x, exponent)',
         params: { exponent: 2.0 },
         sliders: [{ key: 'exponent', label: 'Exponent', min: 0.1, max: 5.0, step: 0.1 }],
-        code: `precision mediump float;
+        getCode: (p) => `precision mediump float;
 uniform vec2 u_resolution;
 
 void main() {
@@ -266,7 +266,7 @@ void main() {
 
     // pow(x, n): reshapes the linear ramp
     // n=1: linear, n=2: quadratic, n=0.5: sqrt
-    float value = pow(st.x, 2.0);
+    float value = pow(st.x, ${Number(p.exponent).toFixed(2)});
 
     gl_FragColor = vec4(vec3(value), 1.0);
 }`
@@ -278,7 +278,7 @@ void main() {
         graphLabel: '0.5 + 0.5 * sin(x * freq * PI)',
         params: { frequency: 4.0 },
         sliders: [{ key: 'frequency', label: 'Frequency', min: 1, max: 20, step: 0.5 }],
-        code: `precision mediump float;
+        getCode: (p) => `precision mediump float;
 uniform vec2 u_resolution;
 uniform float u_time;
 
@@ -288,7 +288,7 @@ void main() {
     vec2 st = gl_FragCoord.xy / u_resolution.xy;
 
     // Animated sine wave
-    float freq = 4.0;
+    float freq = ${Number(p.frequency).toFixed(2)};
     float wave = 0.5 + 0.5 * sin(st.x * freq * PI + u_time * 2.0);
 
     gl_FragColor = vec4(vec3(wave), 1.0);
@@ -301,14 +301,14 @@ void main() {
         graphLabel: 'fract(x * repeats)',
         params: { repeats: 5.0 },
         sliders: [{ key: 'repeats', label: 'Repeats', min: 1, max: 15, step: 1 }],
-        code: `precision mediump float;
+        getCode: (p) => `precision mediump float;
 uniform vec2 u_resolution;
 
 void main() {
     vec2 st = gl_FragCoord.xy / u_resolution.xy;
 
     // fract() creates sawtooth repetition
-    float value = fract(st.x * 5.0);
+    float value = fract(st.x * ${Number(p.repeats).toFixed(1)});
 
     gl_FragColor = vec4(vec3(value), 1.0);
 }`
@@ -320,7 +320,7 @@ void main() {
         graphLabel: '1.0 - abs(x * 2.0 - 1.0)',
         params: {},
         sliders: [],
-        code: `precision mediump float;
+        getCode: (p) => `precision mediump float;
 uniform vec2 u_resolution;
 
 void main() {
@@ -346,7 +346,7 @@ void main() {
         graphLabel: 'smoothstep(c-w, c, x) - smoothstep(c, c+w, x)',
         params: { width: 0.2 },
         sliders: [{ key: 'width', label: 'Pulse width', min: 0.02, max: 0.5 }],
-        code: `precision mediump float;
+        getCode: (p) => `precision mediump float;
 uniform vec2 u_resolution;
 
 void main() {
@@ -354,7 +354,7 @@ void main() {
 
     // Pulse = two smoothsteps subtracted
     float center = 0.5;
-    float width = 0.2;
+    float width = ${Number(p.width).toFixed(3)};
     float pulse = smoothstep(center - width, center, st.x)
                 - smoothstep(center, center + width, st.x);
 
@@ -368,7 +368,7 @@ void main() {
         graphLabel: 'abs(fract(x * n) * 2.0 - 1.0)',
         params: { repeats: 3.0 },
         sliders: [{ key: 'repeats', label: 'Repeats', min: 1, max: 10, step: 1 }],
-        code: `precision mediump float;
+        getCode: (p) => `precision mediump float;
 uniform vec2 u_resolution;
 uniform float u_time;
 
@@ -377,7 +377,7 @@ void main() {
 
     // Ping-pong (triangle wave): up then down
     // abs(fract(x) * 2.0 - 1.0)
-    float value = abs(fract(st.x * 3.0 + u_time * 0.5) * 2.0 - 1.0);
+    float value = abs(fract(st.x * ${Number(p.repeats).toFixed(1)} + u_time * 0.5) * 2.0 - 1.0);
 
     gl_FragColor = vec4(vec3(value), 1.0);
 }`
@@ -533,17 +533,24 @@ function ChapterNav({ currentChapterNum = '03' }) {
 // ============================================================
 function App() {
     const [activePreset, setActivePreset] = useState(0);
-    const [shaderSource, setShaderSource] = useState(PRESETS[0].code);
     const [params, setParams] = useState(PRESETS[0].params);
+    const [shaderSource, setShaderSource] = useState(PRESETS[0].getCode(PRESETS[0].params));
 
     const loadPreset = (index) => {
         setActivePreset(index);
-        setShaderSource(PRESETS[index].code);
-        setParams({ ...PRESETS[index].params });
+        const nextParams = { ...PRESETS[index].params };
+        setParams(nextParams);
+        setShaderSource(PRESETS[index].getCode(nextParams));
     };
 
     const updateParam = (key, value) => {
-        setParams(prev => ({ ...prev, [key]: value }));
+        setParams(prev => {
+            const nextParams = { ...prev, [key]: value };
+            if (PRESETS[activePreset]?.getCode) {
+                setShaderSource(PRESETS[activePreset].getCode(nextParams));
+            }
+            return nextParams;
+        });
     };
 
     const preset = PRESETS[activePreset];
