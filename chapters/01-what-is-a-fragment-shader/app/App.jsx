@@ -380,7 +380,7 @@ function ChapterNav({ currentChapterNum = '01' }) {
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <a
-                    href="../../index.html"
+                    href="../../../index.html"
                     style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -409,7 +409,7 @@ function ChapterNav({ currentChapterNum = '01' }) {
                     value={chapters[currentIndex]?.slug || ''}
                     onChange={(e) => {
                         if (e.target.value) {
-                            window.location.href = `../../chapters/${e.target.value}/app/index.html`;
+                            window.location.href = `../../../chapters/${e.target.value}/app/index.html`;
                         }
                     }}
                     style={{
@@ -432,7 +432,7 @@ function ChapterNav({ currentChapterNum = '01' }) {
 
                 {prevChapter ? (
                     <a
-                        href={`../../chapters/${prevChapter.slug}/app/index.html`}
+                        href={`../../../chapters/${prevChapter.slug}/app/index.html`}
                         style={{
                             padding: '6px 12px',
                             background: '#21262d',
@@ -462,7 +462,7 @@ function ChapterNav({ currentChapterNum = '01' }) {
 
                 {nextChapter ? (
                     <a
-                        href={`../../chapters/${nextChapter.slug}/app/index.html`}
+                        href={`../../../chapters/${nextChapter.slug}/app/index.html`}
                         style={{
                             padding: '6px 12px',
                             background: '#238636',
