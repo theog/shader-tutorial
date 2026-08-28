@@ -131,9 +131,3 @@ void main() {
 ```
 
 </details>
-
-
-
-My Questions:
-1) I dont understand the  u_resolution. where does it come from and what effect does divide have.
-  vec2 st = gl_FragCoord.xy / u_resolution.xy;
