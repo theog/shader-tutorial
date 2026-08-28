@@ -35,7 +35,7 @@ Full curriculum outline is documented in [`SYLLABUS.md`](./SYLLABUS.md).
 | **01** | **What Is a Fragment Shader?** | ✅ Ready | `gl_FragCoord`, `gl_FragColor`, Parallel execution |
 | **02** | **Hello World — Your First Shader** | ✅ Ready | `uniform`, `u_resolution`, `u_time`, `u_mouse`, Gradients |
 | **03** | **Shaping Functions** | ✅ Ready | `step()`, `smoothstep()`, `pow()`, `fract()`, `abs()` |
-| **04** | **Colors & Color Spaces** | 🗓️ Planned | HSB/HSL to RGB, Polar coordinates, Color palettes |
+| **04** | **Colors & Color Spaces** | ✅ Ready | HSB/HSL to RGB, Polar coordinates, Cosine palettes |
 | **05** | **2D Shapes & Signed Distance Fields** | 🗓️ Planned | SDFs, `length()`, Circles, Rectangles, Boolean operations |
 | **06** | **Matrices & Coordinate Transforms** | 🗓️ Planned | `mat2`, Rotation, Translation, Scale, Space deformation |
 | **07** | **Patterns & Tiling** | 🗓️ Planned | Grid tiling, Brick offsets, Truchet tiles |
@@ -49,7 +49,7 @@ Full curriculum outline is documented in [`SYLLABUS.md`](./SYLLABUS.md).
 
 To scaffold a new chapter from templates:
 ```bash
-./scripts/new-chapter.sh 04 "Colors & Color Spaces"
+./scripts/new-chapter.sh 05 "2D Shapes & Signed Distance Fields"
 ```
 
 To validate that all chapter assets and files are present:

@@ -199,6 +199,7 @@ function ChapterNav({ currentChapterNum = '{{CHAPTER_NUM}}' }) {
         { num: '01', slug: '01-what-is-a-fragment-shader', title: 'Chapter 01: What Is a Fragment Shader?' },
         { num: '02', slug: '02-hello-world-your-first-shader', title: 'Chapter 02: Hello World' },
         { num: '03', slug: '03-shaping-functions', title: 'Chapter 03: Shaping Functions' },
+        { num: '04', slug: '04-colors-color-spaces', title: 'Chapter 04: Colors & Color Spaces' },
     ];
     const currentIndex = chapters.findIndex(c => c.num === currentChapterNum);
     const prevChapter = currentIndex > 0 ? chapters[currentIndex - 1] : null;

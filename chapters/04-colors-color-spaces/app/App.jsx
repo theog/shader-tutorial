@@ -1,21 +1,20 @@
 /**
- * Chapter 03: Shaping Functions
- * Interactive function plotter + shader canvas.
- * Shows 1D function graph alongside the 2D shader output.
+ * Chapter 04: Colors & Color Spaces
+ * Interactive app for RGB mixing, HSB polar wheels, and Inigo Quilez Cosine Palettes.
  *
  * Features:
- * - Function graph canvas (plots y=f(x) curves)
- * - Live shader editor
- * - Slider controls for key parameters
- * - Multiple preset shaping functions
+ * - Live WebGL canvas with instant compilation
+ * - Real-time slider controls for HSB, RGB mixing, and Cosine palette parameters
+ * - Dynamic GLSL code synchronization
+ * - 5 Interactive visual presets
  */
 
 const { useState, useEffect, useRef, useCallback } = React;
 
 // ============================================================
-// ShaderCanvas — renders a fragment shader via WebGL
+// ShaderCanvas — WebGL Fragment Renderer
 // ============================================================
-function ShaderCanvas({ fragmentSource, width = 380, height = 380 }) {
+function ShaderCanvas({ fragmentSource, width = 400, height = 400 }) {
     const canvasRef = useRef(null);
     const glRef = useRef(null);
     const programRef = useRef(null);
@@ -78,16 +77,19 @@ function ShaderCanvas({ fragmentSource, width = 380, height = 380 }) {
         if (error) { console.warn('Shader error:', error); return; }
         programRef.current = program;
         startTimeRef.current = Date.now();
+
         const render = () => {
             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
             gl.clearColor(0,0,0,1); gl.clear(gl.COLOR_BUFFER_BIT);
             gl.useProgram(program);
+
             const uRes = gl.getUniformLocation(program, 'u_resolution');
             const uTime = gl.getUniformLocation(program, 'u_time');
             const uMouse = gl.getUniformLocation(program, 'u_mouse');
             if (uRes) gl.uniform2f(uRes, gl.canvas.width, gl.canvas.height);
             if (uTime) gl.uniform1f(uTime, (Date.now() - startTimeRef.current) / 1000.0);
             if (uMouse) gl.uniform2f(uMouse, mouseRef.current[0], mouseRef.current[1]);
+
             const aPos = gl.getAttribLocation(program, 'a_position');
             gl.enableVertexAttribArray(aPos);
             gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
@@ -106,65 +108,7 @@ function ShaderCanvas({ fragmentSource, width = 380, height = 380 }) {
     return (
         <canvas ref={canvasRef} width={width} height={height}
             onMouseMove={handleMouseMove}
-            style={{ borderRadius: '8px', border: '1px solid #333' }} />
-    );
-}
-
-// ============================================================
-// FunctionGraph — plots a 1D function as a graph using Canvas2D
-// ============================================================
-function FunctionGraph({ func, label, width = 380, height = 200, color = '#3fb950' }) {
-    const canvasRef = useRef(null);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, width, height);
-
-        // Background
-        ctx.fillStyle = '#0d1117';
-        ctx.fillRect(0, 0, width, height);
-
-        // Grid lines
-        ctx.strokeStyle = '#1c2128';
-        ctx.lineWidth = 1;
-        for (let i = 0; i <= 4; i++) {
-            const x = (i / 4) * width;
-            const y = (i / 4) * height;
-            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
-        }
-
-        // Axis labels
-        ctx.fillStyle = '#555';
-        ctx.font = '10px monospace';
-        ctx.fillText('0', 4, height - 4);
-        ctx.fillText('1', width - 12, height - 4);
-        ctx.fillText('1', 4, 12);
-
-        // Plot function
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        for (let px = 0; px < width; px++) {
-            const x = px / width; // 0..1
-            const y = Math.max(0, Math.min(1, func(x)));
-            const canvasY = height - y * height;
-            if (px === 0) ctx.moveTo(px, canvasY);
-            else ctx.lineTo(px, canvasY);
-        }
-        ctx.stroke();
-
-        // Label
-        ctx.fillStyle = color;
-        ctx.font = 'bold 12px monospace';
-        ctx.fillText(label, 8, 20);
-
-    }, [func, label, width, height, color]);
-
-    return (
-        <canvas ref={canvasRef} width={width} height={height}
-            style={{ borderRadius: '6px', border: '1px solid #30363d' }} />
+            style={{ borderRadius: '8px', border: '1px solid #30363d', width: '100%', maxWidth: `${width}px` }} />
     );
 }
 
@@ -176,7 +120,7 @@ function ShaderEditor({ value, onChange }) {
         <textarea value={value} onChange={(e) => onChange(e.target.value)}
             spellCheck={false}
             style={{
-                width: '100%', height: '260px',
+                width: '100%', height: '340px',
                 fontFamily: "'SF Mono', 'Fira Code', monospace",
                 fontSize: '12px', backgroundColor: '#0d1117',
                 color: '#c9d1d9', border: '1px solid #333',
@@ -192,9 +136,10 @@ function ShaderEditor({ value, onChange }) {
 function Slider({ label, min = 0, max = 1, step = 0.01, value, onChange }) {
     return (
         <div style={{ marginBottom: '8px' }}>
-            <label style={{ fontSize: '11px', color: '#888' }}>
-                {label}: <strong style={{ color: '#58a6ff' }}>{value.toFixed(3)}</strong>
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#888' }}>
+                <span>{label}</span>
+                <strong style={{ color: '#58a6ff' }}>{Number(value).toFixed(2)}</strong>
+            </div>
             <input type="range" min={min} max={max} step={step} value={value}
                 onChange={(e) => onChange(parseFloat(e.target.value))}
                 style={{ width: '100%', marginTop: '2px' }} />
@@ -203,191 +148,9 @@ function Slider({ label, min = 0, max = 1, step = 0.01, value, onChange }) {
 }
 
 // ============================================================
-// Presets — each has a shader, a JS graph function, and description
-// ============================================================
-const PRESETS = [
-    {
-        name: '1. step()',
-        description: 'Hard binary cutoff. Everything below the edge is 0, above is 1.',
-        graphFunc: (x, params) => x >= params.edge ? 1 : 0,
-        graphLabel: 'step(edge, x)',
-        params: { edge: 0.5 },
-        sliders: [{ key: 'edge', label: 'Edge threshold', min: 0, max: 1 }],
-        getCode: (p) => `precision mediump float;
-uniform vec2 u_resolution;
-
-void main() {
-    vec2 st = gl_FragCoord.xy / u_resolution.xy;
-
-    // step(edge, x): returns 0 below, 1 above
-    float value = step(${Number(p.edge).toFixed(3)}, st.x);
-
-    gl_FragColor = vec4(vec3(value), 1.0);
-}`
-    },
-    {
-        name: '2. smoothstep()',
-        description: 'S-curve transition between two edges. The soft version of step().',
-        graphFunc: (x, params) => {
-            const t = Math.max(0, Math.min(1, (x - params.edge0) / (params.edge1 - params.edge0)));
-            return t * t * (3 - 2 * t);
-        },
-        graphLabel: 'smoothstep(edge0, edge1, x)',
-        params: { edge0: 0.3, edge1: 0.7 },
-        sliders: [
-            { key: 'edge0', label: 'Edge 0 (start)', min: 0, max: 1 },
-            { key: 'edge1', label: 'Edge 1 (end)', min: 0, max: 1 },
-        ],
-        getCode: (p) => `precision mediump float;
-uniform vec2 u_resolution;
-
-void main() {
-    vec2 st = gl_FragCoord.xy / u_resolution.xy;
-
-    // smoothstep(edge0, edge1, x)
-    // Soft transition from edge0 to edge1
-    float value = smoothstep(${Number(p.edge0).toFixed(3)}, ${Number(p.edge1).toFixed(3)}, st.x);
-
-    gl_FragColor = vec4(vec3(value), 1.0);
-}`
-    },
-    {
-        name: '3. pow()',
-        description: 'Power curve. Exponent > 1 darkens (slow start), < 1 brightens (fast start).',
-        graphFunc: (x, params) => Math.pow(x, params.exponent),
-        graphLabel: 'pow(x, exponent)',
-        params: { exponent: 2.0 },
-        sliders: [{ key: 'exponent', label: 'Exponent', min: 0.1, max: 5.0, step: 0.1 }],
-        getCode: (p) => `precision mediump float;
-uniform vec2 u_resolution;
-
-void main() {
-    vec2 st = gl_FragCoord.xy / u_resolution.xy;
-
-    // pow(x, n): reshapes the linear ramp
-    // n=1: linear, n=2: quadratic, n=0.5: sqrt
-    float value = pow(st.x, ${Number(p.exponent).toFixed(2)});
-
-    gl_FragColor = vec4(vec3(value), 1.0);
-}`
-    },
-    {
-        name: '4. sin() wave',
-        description: 'Smooth oscillation. Frequency controls how many waves fit, remapped to 0-1.',
-        graphFunc: (x, params) => 0.5 + 0.5 * Math.sin(x * params.frequency * Math.PI),
-        graphLabel: '0.5 + 0.5 * sin(x * freq * PI)',
-        params: { frequency: 4.0 },
-        sliders: [{ key: 'frequency', label: 'Frequency', min: 1, max: 20, step: 0.5 }],
-        getCode: (p) => `precision mediump float;
-uniform vec2 u_resolution;
-uniform float u_time;
-
-#define PI 3.14159265359
-
-void main() {
-    vec2 st = gl_FragCoord.xy / u_resolution.xy;
-
-    // Animated sine wave
-    float freq = ${Number(p.frequency).toFixed(2)};
-    float wave = 0.5 + 0.5 * sin(st.x * freq * PI + u_time * 2.0);
-
-    gl_FragColor = vec4(vec3(wave), 1.0);
-}`
-    },
-    {
-        name: '5. fract() sawtooth',
-        description: 'Fractional part creates repeating ramps. Foundation of tiling.',
-        graphFunc: (x, params) => (x * params.repeats) % 1,
-        graphLabel: 'fract(x * repeats)',
-        params: { repeats: 5.0 },
-        sliders: [{ key: 'repeats', label: 'Repeats', min: 1, max: 15, step: 1 }],
-        getCode: (p) => `precision mediump float;
-uniform vec2 u_resolution;
-
-void main() {
-    vec2 st = gl_FragCoord.xy / u_resolution.xy;
-
-    // fract() creates sawtooth repetition
-    float value = fract(st.x * ${Number(p.repeats).toFixed(1)});
-
-    gl_FragColor = vec4(vec3(value), 1.0);
-}`
-    },
-    {
-        name: '6. abs() mirror',
-        description: 'Absolute value creates V-shape symmetry. Peak at center when inverted.',
-        graphFunc: (x, params) => 1.0 - Math.abs(x * 2.0 - 1.0),
-        graphLabel: '1.0 - abs(x * 2.0 - 1.0)',
-        params: {},
-        sliders: [],
-        getCode: (p) => `precision mediump float;
-uniform vec2 u_resolution;
-
-void main() {
-    vec2 st = gl_FragCoord.xy / u_resolution.xy;
-
-    // Center coordinates: remap 0..1 to -1..+1
-    // abs() mirrors: V-shape
-    // Invert: peak at center
-    float value = 1.0 - abs(st.x * 2.0 - 1.0);
-
-    gl_FragColor = vec4(vec3(value), 1.0);
-}`
-    },
-    {
-        name: '7. Pulse (composed)',
-        description: 'Two smoothsteps subtracted = a soft bump. Width controls pulse size.',
-        graphFunc: (x, params) => {
-            const c = 0.5, w = params.width;
-            const s1 = Math.max(0, Math.min(1, (x - (c - w)) / (w * 0.5)));
-            const s2 = Math.max(0, Math.min(1, (x - c) / (w * 0.5)));
-            return (s1*s1*(3-2*s1)) - (s2*s2*(3-2*s2));
-        },
-        graphLabel: 'smoothstep(c-w, c, x) - smoothstep(c, c+w, x)',
-        params: { width: 0.2 },
-        sliders: [{ key: 'width', label: 'Pulse width', min: 0.02, max: 0.5 }],
-        getCode: (p) => `precision mediump float;
-uniform vec2 u_resolution;
-
-void main() {
-    vec2 st = gl_FragCoord.xy / u_resolution.xy;
-
-    // Pulse = two smoothsteps subtracted
-    float center = 0.5;
-    float width = ${Number(p.width).toFixed(3)};
-    float pulse = smoothstep(center - width, center, st.x)
-                - smoothstep(center, center + width, st.x);
-
-    gl_FragColor = vec4(vec3(pulse), 1.0);
-}`
-    },
-    {
-        name: '8. Ping-pong',
-        description: 'Triangle wave: bounces between 0 and 1. Combines fract() and abs().',
-        graphFunc: (x, params) => Math.abs(((x * params.repeats) % 1) * 2.0 - 1.0),
-        graphLabel: 'abs(fract(x * n) * 2.0 - 1.0)',
-        params: { repeats: 3.0 },
-        sliders: [{ key: 'repeats', label: 'Repeats', min: 1, max: 10, step: 1 }],
-        getCode: (p) => `precision mediump float;
-uniform vec2 u_resolution;
-uniform float u_time;
-
-void main() {
-    vec2 st = gl_FragCoord.xy / u_resolution.xy;
-
-    // Ping-pong (triangle wave): up then down
-    // abs(fract(x) * 2.0 - 1.0)
-    float value = abs(fract(st.x * ${Number(p.repeats).toFixed(1)} + u_time * 0.5) * 2.0 - 1.0);
-
-    gl_FragColor = vec4(vec3(value), 1.0);
-}`
-    },
-];
-
-// ============================================================
 // ChapterNav — Top navigation bar for chapter apps
 // ============================================================
-function ChapterNav({ currentChapterNum = '03' }) {
+function ChapterNav({ currentChapterNum = '04' }) {
     const chapters = [
         { num: '01', slug: '01-what-is-a-fragment-shader', title: 'Chapter 01: What Is a Fragment Shader?' },
         { num: '02', slug: '02-hello-world-your-first-shader', title: 'Chapter 02: Hello World' },
@@ -530,7 +293,176 @@ function ChapterNav({ currentChapterNum = '03' }) {
 }
 
 // ============================================================
-// Main App
+// Presets Configuration
+// ============================================================
+const PRESETS = [
+    {
+        name: '1. Smooth Gradient Mix',
+        description: 'Blends between two colors using smoothstep transition shaping.',
+        params: { smoothness: 0.8, angleOffset: 0.2 },
+        sliders: [
+            { key: 'smoothness', label: 'Transition Curve Width', min: 0.1, max: 1.0, step: 0.05 },
+            { key: 'angleOffset', label: 'Wave Distortion', min: 0.0, max: 0.5, step: 0.02 },
+        ],
+        getCode: (p) => `precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+
+void main() {
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+
+    vec3 colorA = vec3(0.149, 0.141, 0.912); // Deep blue
+    vec3 colorB = vec3(1.000, 0.833, 0.224); // Warm gold
+
+    // Smoothstep transition with sine wave distortion
+    float wave = ${Number(p.angleOffset).toFixed(2)} * sin(st.y * 6.28 + u_time);
+    float width = ${Number(p.smoothness).toFixed(2)};
+    float pct = smoothstep(0.5 - width*0.5, 0.5 + width*0.5, st.x + wave);
+
+    vec3 color = mix(colorA, colorB, pct);
+
+    gl_FragColor = vec4(color, 1.0);
+}`
+    },
+    {
+        name: '2. HSB Polar Color Wheel',
+        description: 'Converts Cartesian coords to Polar space (Angle & Radius) to draw a continuous hue wheel.',
+        params: { saturationScale: 1.2, speed: 0.2 },
+        sliders: [
+            { key: 'saturationScale', label: 'Saturation Multiplier', min: 0.2, max: 2.0, step: 0.1 },
+            { key: 'speed', label: 'Rotation Speed', min: 0.0, max: 1.0, step: 0.05 },
+        ],
+        getCode: (p) => `precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+
+#define TWO_PI 6.28318530718
+
+vec3 hsb2rgb(in vec3 c) {
+    vec3 rgb = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+    rgb = rgb * rgb * (3.0 - 2.0 * rgb);
+    return c.z * mix(vec3(1.0), rgb, c.y);
+}
+
+void main() {
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+    vec2 toCenter = vec2(0.5) - st;
+
+    float angle = atan(toCenter.y, toCenter.x);
+    float radius = length(toCenter) * 2.0;
+
+    float hue = (angle / TWO_PI) + 0.5 + u_time * ${Number(p.speed).toFixed(2)};
+    float sat = clamp(radius * ${Number(p.saturationScale).toFixed(2)}, 0.0, 1.0);
+
+    vec3 color = hsb2rgb(vec3(hue, sat, 1.0));
+
+    gl_FragColor = vec4(color, 1.0);
+}`
+    },
+    {
+        name: '3. Cosine Palettes (Inigo Quilez)',
+        description: 'Infinite procedural harmonic palettes generated using trigonometric cosine curves.',
+        params: { freq: 1.0, phaseShift: 0.33, speed: 0.15 },
+        sliders: [
+            { key: 'freq', label: 'Oscillation Frequency', min: 0.5, max: 3.0, step: 0.1 },
+            { key: 'phaseShift', label: 'RGB Phase Separation', min: 0.0, max: 1.0, step: 0.05 },
+            { key: 'speed', label: 'Animation Speed', min: 0.0, max: 0.5, step: 0.05 },
+        ],
+        getCode: (p) => `precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+
+#define TWO_PI 6.28318530718
+
+// Inigo Quilez Cosine Palette Formula: a + b * cos(2*PI*(c*t + d))
+vec3 cosinePalette(in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d) {
+    return a + b * cos(TWO_PI * (c * t + d));
+}
+
+void main() {
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+
+    vec3 a = vec3(0.5, 0.5, 0.5); // Brightness offset
+    vec3 b = vec3(0.5, 0.5, 0.5); // Contrast amplitude
+    vec3 c = vec3(${Number(p.freq).toFixed(2)}); // Frequency
+    vec3 d = vec3(0.0, ${Number(p.phaseShift).toFixed(2)}, ${Number(p.phaseShift * 2.0).toFixed(2)}); // Phase
+
+    float t = st.x + u_time * ${Number(p.speed).toFixed(2)};
+    vec3 color = cosinePalette(t, a, b, c, d);
+
+    gl_FragColor = vec4(color, 1.0);
+}`
+    },
+    {
+        name: '4. Per-Channel Shaping',
+        description: 'Applies different shaping curves to Red, Green, and Blue channels for vibrant transitions.',
+        params: { redCurve: 2.0, greenFreq: 3.14 },
+        sliders: [
+            { key: 'redCurve', label: 'Red Power Exponent', min: 0.5, max: 4.0, step: 0.1 },
+            { key: 'greenFreq', label: 'Green Sine Frequency', min: 1.0, max: 6.28, step: 0.2 },
+        ],
+        getCode: (p) => `precision mediump float;
+uniform vec2 u_resolution;
+
+void main() {
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+
+    vec3 colorA = vec3(0.1, 0.05, 0.4); // Indigo
+    vec3 colorB = vec3(1.0, 0.8, 0.2);  // Amber
+
+    // Independent per-channel transition curves
+    vec3 pct;
+    pct.r = pow(st.x, ${Number(p.redCurve).toFixed(2)});
+    pct.g = sin(st.x * ${Number(p.greenFreq).toFixed(2)});
+    pct.b = smoothstep(0.2, 0.8, st.x);
+
+    vec3 color = mix(colorA, colorB, pct);
+
+    gl_FragColor = vec4(color, 1.0);
+}`
+    },
+    {
+        name: '5. Radial Color Sunburst',
+        description: 'Multi-armed color spectrum with radial pulse and angular repetition.',
+        params: { arms: 6.0, pulseSpeed: 1.5 },
+        sliders: [
+            { key: 'arms', label: 'Color Star Arms', min: 2.0, max: 12.0, step: 1.0 },
+            { key: 'pulseSpeed', label: 'Pulse Frequency', min: 0.5, max: 3.0, step: 0.1 },
+        ],
+        getCode: (p) => `precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+
+#define TWO_PI 6.28318530718
+
+vec3 hsb2rgb(in vec3 c) {
+    vec3 rgb = clamp(abs(mod(c.x * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+    rgb = rgb * rgb * (3.0 - 2.0 * rgb);
+    return c.z * mix(vec3(1.0), rgb, c.y);
+}
+
+void main() {
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+    vec2 toCenter = vec2(0.5) - st;
+
+    float angle = atan(toCenter.y, toCenter.x);
+    float radius = length(toCenter) * 2.0;
+
+    // Modulate hue by star arm count
+    float armCount = ${Number(p.arms).toFixed(1)};
+    float hue = fract((angle / TWO_PI) * armCount + u_time * 0.1);
+    float glow = 1.0 - smoothstep(0.0, 1.0, radius);
+    float pulse = 0.8 + 0.2 * sin(radius * 10.0 - u_time * ${Number(p.pulseSpeed).toFixed(2)});
+
+    vec3 color = hsb2rgb(vec3(hue, 0.9, glow * pulse));
+
+    gl_FragColor = vec4(color, 1.0);
+}`
+    }
+];
+
+// ============================================================
+// Main App Component
 // ============================================================
 function App() {
     const [activePreset, setActivePreset] = useState(0);
@@ -558,122 +490,96 @@ function App() {
 
     return (
         <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-            {/* Top Navigation */}
-            <ChapterNav currentChapterNum="03" />
+            {/* Navigation Header */}
+            <ChapterNav currentChapterNum="04" />
 
-            {/* Header */}
+            {/* Title Header */}
             <header style={{ marginBottom: '20px' }}>
                 <h1 style={{ fontSize: '24px', color: '#58a6ff', marginBottom: '4px' }}>
-                    Chapter 03: Shaping Functions
+                    Chapter 04: Colors & Color Spaces
                 </h1>
-                <p style={{ color: '#888' }}>
-                    The building blocks of all shader visuals. Each function reshapes a 0–1 input into a different curve.
+                <p style={{ color: '#8b949e', fontSize: '14px' }}>
+                    Explore RGB channel interpolation, HSB polar color wheels, and procedural cosine palettes.
                 </p>
             </header>
 
-            {/* Preset buttons */}
+            {/* Preset selector */}
             <section style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
                     {PRESETS.map((p, i) => (
                         <button key={i} onClick={() => loadPreset(i)}
                             style={{
-                                padding: '5px 10px', borderRadius: '6px',
-                                border: activePreset === i ? '1px solid #58a6ff' : '1px solid #333',
+                                padding: '6px 12px', borderRadius: '6px',
+                                border: activePreset === i ? '1px solid #58a6ff' : '1px solid #30363d',
                                 background: activePreset === i ? '#1f3a5f' : '#161b22',
-                                color: activePreset === i ? '#58a6ff' : '#aaa',
-                                cursor: 'pointer', fontSize: '11px',
+                                color: activePreset === i ? '#58a6ff' : '#c9d1d9',
+                                cursor: 'pointer', fontSize: '12px', fontWeight: '500'
                             }}>
                             {p.name}
                         </button>
                     ))}
                 </div>
-                <p style={{ fontSize: '12px', color: '#666', marginTop: '6px' }}>
+                <p style={{ fontSize: '12px', color: '#8b949e' }}>
                     {preset.description}
                 </p>
             </section>
 
-            {/* Function Graph + Sliders */}
+            {/* Sliders Panel */}
             <section style={{
                 marginBottom: '20px', padding: '16px',
                 background: '#161b22', borderRadius: '12px',
                 border: '1px solid #30363d'
             }}>
-                <h3 style={{ fontSize: '13px', color: '#aaa', marginBottom: '10px' }}>
-                    1D Function Graph — <span style={{ color: '#3fb950' }}>{preset.graphLabel}</span>
+                <h3 style={{ fontSize: '13px', color: '#79c0ff', marginBottom: '12px' }}>
+                    Interactive Parameter Controls (Real-Time Synchronized)
                 </h3>
-                <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-                    <FunctionGraph
-                        func={(x) => preset.graphFunc(x, params)}
-                        label={preset.graphLabel}
-                        width={380}
-                        height={180}
-                    />
-                    <div style={{ minWidth: '200px' }}>
-                        {preset.sliders.map(s => (
-                            <Slider key={s.key}
-                                label={s.label}
-                                min={s.min} max={s.max}
-                                step={s.step || 0.01}
-                                value={params[s.key] || 0}
-                                onChange={(v) => updateParam(s.key, v)} />
-                        ))}
-                        {preset.sliders.length === 0 && (
-                            <p style={{ fontSize: '11px', color: '#555' }}>
-                                No parameters for this function.
-                            </p>
-                        )}
-                        <div style={{ marginTop: '12px', padding: '10px', background: '#0d1117', borderRadius: '6px' }}>
-                            <p style={{ fontSize: '11px', color: '#666' }}>
-                                The graph shows <code>y = f(x)</code> where x goes from 0 to 1.
-                                The shader below applies this same function to <code>st.x</code> and outputs it as brightness.
-                            </p>
-                        </div>
-                    </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                    {preset.sliders.map(s => (
+                        <Slider key={s.key}
+                            label={s.label}
+                            min={s.min} max={s.max}
+                            step={s.step || 0.01}
+                            value={params[s.key] || 0}
+                            onChange={(v) => updateParam(s.key, v)} />
+                    ))}
                 </div>
             </section>
 
-            {/* Editor + Shader Canvas */}
+            {/* Main Interactive Grid: Editor vs Output */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
                 <div>
                     <h3 style={{ marginBottom: '8px', fontSize: '13px', color: '#aaa' }}>
-                        Shader Code
+                        Fragment Shader Code (GLSL)
                     </h3>
                     <ShaderEditor value={shaderSource} onChange={setShaderSource} />
                 </div>
                 <div>
                     <h3 style={{ marginBottom: '8px', fontSize: '13px', color: '#aaa' }}>
-                        2D Output (function applied per-pixel)
+                        2D GPU Visual Output
                     </h3>
-                    <ShaderCanvas fragmentSource={shaderSource} width={380} height={380} />
+                    <ShaderCanvas fragmentSource={shaderSource} width={400} height={340} />
                 </div>
             </div>
 
-            {/* Cheat sheet */}
+            {/* Key concepts card */}
             <section style={{
                 marginTop: '24px', padding: '20px',
                 background: '#0d1117', borderRadius: '12px',
                 border: '1px solid #30363d'
             }}>
                 <h3 style={{ fontSize: '14px', color: '#58a6ff', marginBottom: '12px' }}>
-                    Function Cheat Sheet
+                    Color Cheatsheet & Formulas
                 </h3>
-                <div style={{
-                    display: 'grid', gridTemplateColumns: '1fr 1fr',
-                    gap: '8px', fontSize: '12px'
-                }}>
-                    <div><code style={{ color: '#ff7b72' }}>step(e, x)</code> <span style={{ color: '#666' }}>→ 0 or 1 (hard edge)</span></div>
-                    <div><code style={{ color: '#ff7b72' }}>smoothstep(a, b, x)</code> <span style={{ color: '#666' }}>→ S-curve 0..1</span></div>
-                    <div><code style={{ color: '#ff7b72' }}>pow(x, n)</code> <span style={{ color: '#666' }}>→ bend the ramp</span></div>
-                    <div><code style={{ color: '#ff7b72' }}>sin(x) / cos(x)</code> <span style={{ color: '#666' }}>→ oscillate -1..+1</span></div>
-                    <div><code style={{ color: '#ff7b72' }}>fract(x)</code> <span style={{ color: '#666' }}>→ sawtooth repeat</span></div>
-                    <div><code style={{ color: '#ff7b72' }}>abs(x)</code> <span style={{ color: '#666' }}>→ V-shape mirror</span></div>
-                    <div><code style={{ color: '#ff7b72' }}>clamp(x, 0, 1)</code> <span style={{ color: '#666' }}>→ cap to range</span></div>
-                    <div><code style={{ color: '#ff7b72' }}>floor(x) / ceil(x)</code> <span style={{ color: '#666' }}>→ staircase</span></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px', color: '#c9d1d9' }}>
+                    <div><code style={{ color: '#ff7b72' }}>mix(A, B, t)</code> — Interpolates color vectors from A to B</div>
+                    <div><code style={{ color: '#ff7b72' }}>hsb2rgb(vec3(H,S,B))</code> — Maps polar HSB to screen RGB</div>
+                    <div><code style={{ color: '#ff7b72' }}>atan(y, x)</code> — Computes polar angle for color wheels</div>
+                    <div><code style={{ color: '#ff7b72' }}>a + b*cos(2π(c*t + d))</code> — Analytical Cosine palette generator</div>
                 </div>
             </section>
 
-            <footer style={{ marginTop: '32px', color: '#333', fontSize: '11px', textAlign: 'center' }}>
-                Shader Tutorial — Chapter 03 | Adjust sliders to see how parameters change the curve
+            <footer style={{ marginTop: '32px', color: '#6e7681', fontSize: '11px', textAlign: 'center' }}>
+                Shader Tutorial — Chapter 04 | Move sliders or edit code directly for instant WebGL compilation
             </footer>
         </div>
     );

@@ -258,14 +258,17 @@ void main() {
             },
             {
                 id: '04',
-                slug: '04-color',
+                slug: '04-colors-color-spaces',
                 number: '04',
                 part: 'Part II — Colors & Shapes',
                 title: 'Colors & Color Spaces',
                 subtitle: 'RGB, HSB/HSL, Hue Wheels & Palettes',
                 description: 'Transition between RGB and HSB color spaces, build rainbow hue wheels, use mix() for non-linear color interpolation, and design procedural palettes.',
-                concepts: ['HSB to RGB', 'Hue Wheels', 'mix()', 'Color Palettes', 'Polar Coordinates'],
-                isReady: false,
+                concepts: ['HSB to RGB', 'Hue Wheels', 'mix()', 'Cosine Palettes', 'Polar Coordinates'],
+                isReady: true,
+                appPath: 'chapters/04-colors-color-spaces/app/index.html',
+                lessonPath: 'chapters/04-colors-color-spaces/lesson.md',
+                quizPath: 'chapters/04-colors-color-spaces/quiz.md',
                 previewShader: `precision mediump float;
 uniform vec2 u_resolution;
 uniform float u_time;
@@ -555,7 +558,7 @@ void main() {
                                 fontSize: '13px'
                             }}>
                                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3fb950', display: 'inline-block' }}></span>
-                                <span><strong>3</strong> Playgrounds Ready</span>
+                                <span><strong>4</strong> Playgrounds Ready</span>
                             </div>
                             <div style={{
                                 display: 'flex',
