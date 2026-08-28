@@ -5,7 +5,14 @@ An interactive, browser-based tutorial series for learning 2D fragment shaders (
 Every chapter includes:
 - 🎮 **Interactive WebGL Playground** (Live GLSL code editor, real-time compilation, uniform controls, preset examples)
 - 📖 **Written Lesson** (Concept deep-dives, diagrams, mathematical intuition)
-- ❓ **Concept Quiz** (Multiple choice, true/false, and code challenges)
+- ❓ **Concept Quiz** (Step-by-step interactive self-assessment with score tracking)
+
+---
+
+## 🌐 Live Interactive Demo
+
+Try the live interactive tutorial directly in your browser:  
+👉 **[https://theog.github.io/shader-tutorial/index.html](https://theog.github.io/shader-tutorial/index.html)**
 
 ---
 
