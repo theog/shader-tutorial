@@ -290,8 +290,8 @@ void main() {
                 id: '05',
                 slug: '05-shapes',
                 number: '05',
-                part: 'Part II — Colors & Shapes',
-                title: '2D Shapes & Signed Distance Fields',
+                part: 'Part II — 2D Shapes & Geometry',
+                title: '2D Shapes & Basic SDFs',
                 subtitle: 'Lines, Circles, Rectangles & Distance Fields',
                 description: 'Learn Signed Distance Functions (SDFs) to draw crisp or antialiased geometric primitives: circles via length(), rectangles via step()/abs(), and boolean operations.',
                 concepts: ['length()', 'distance()', 'SDF Basics', 'Union/Intersect', 'Anti-aliasing'],
@@ -299,57 +299,145 @@ void main() {
             },
             {
                 id: '06',
-                slug: '06-matrices-transformations',
+                slug: '06-advanced-sdf',
                 number: '06',
-                part: 'Part II — Colors & Shapes',
-                title: 'Matrices & Coordinate Transforms',
-                subtitle: 'Translate, Rotate, Scale & Space Deformation',
-                description: 'Apply 2D matrix transformations (mat2) to rotate coordinate spaces around arbitrary pivots, scale space, and create dynamic geometric motion.',
-                concepts: ['mat2', 'Rotation', 'Translation', 'Scale', 'Pivot Space'],
+                part: 'Part II — 2D Shapes & Geometry',
+                title: 'Advanced SDFs & CSG Geometry',
+                subtitle: 'Smooth Minimum (smin), Outlines & Boolean Operations',
+                description: 'Master Constructive Solid Geometry (CSG), smooth blending between shapes with smin(), onion outlines, rounded corners, and Euclidean distance transforms.',
+                concepts: ['smin()', 'CSG Operations', 'Rounding', 'Onion Outlines', 'Polygon SDFs'],
                 isReady: false
             },
             {
                 id: '07',
-                slug: '07-patterns',
+                slug: '07-matrices-transformations',
                 number: '07',
+                part: 'Part II — 2D Shapes & Geometry',
+                title: 'Matrices & Coordinate Transforms',
+                subtitle: 'Translate, Rotate, Scale & Space Deformation',
+                description: 'Apply 2D matrix transformations (mat2) to rotate coordinate spaces around arbitrary pivots, scale space, and create dynamic geometric motion.',
+                concepts: ['mat2', 'Rotation Matrix', 'Translation', 'Scale', 'Pivot Space'],
+                isReady: false
+            },
+            {
+                id: '08',
+                slug: '08-patterns',
+                number: '08',
                 part: 'Part III — Procedural Patterns & Noise',
-                title: 'Patterns & Tiling',
-                subtitle: 'Repetition, Offsets & Truchet Tiles',
+                title: 'Patterns & Grid Tiling',
+                subtitle: 'Repetition, Brick Offsets & Truchet Tiles',
                 description: 'Tile 2D space with fract() and floor(), apply alternating row/column offsets (brick patterns), and create labyrinthine Truchet maze generators.',
                 concepts: ['fract() & floor()', 'Grid Cells', 'Brick Offsets', 'Truchet Tiles', 'Symmetry'],
                 isReady: false
             },
             {
-                id: '08',
-                slug: '08-random-noise',
-                number: '08',
-                part: 'Part III — Procedural Patterns & Noise',
-                title: 'Randomness & Value Noise',
-                subtitle: 'Pseudo-Randomness, 1D & 2D Smooth Noise',
-                description: 'Generate deterministic pseudo-random values from sinusoidal hashes, interpolate grid corners with smoothstep to construct 1D/2D value noise fields.',
-                concepts: ['fract(sin()) Hash', '1D/2D Noise', 'Bilinear Interpolation', 'Organic Textures'],
-                isReady: false
-            },
-            {
                 id: '09',
-                slug: '09-cellular-noise',
+                slug: '09-random-noise',
                 number: '09',
                 part: 'Part III — Procedural Patterns & Noise',
-                title: 'Cellular & Worley Noise',
-                subtitle: 'Voronoi Diagrams, Metric Distances & Organic Cells',
-                description: 'Compute distance to closest feature points across neighboring grid cells to generate natural biological textures: water caustics, reptile scales, and stone.',
-                concepts: ['Worley Noise', 'Voronoi Diagrams', 'Distance Metrics', 'Biomorphic Textures'],
+                title: 'Randomness & Hash Functions',
+                subtitle: 'Pseudo-Randomness, 1D & 2D Deterministic Chaos',
+                description: 'Generate deterministic pseudo-random values from sinusoidal hashes, assign unique random seeds to grid cells, and create digital static and grain.',
+                concepts: ['fract(sin()) Hash', '1D/2D Hashes', 'Grid Seeds', 'Deterministic Noise'],
                 isReady: false
             },
             {
                 id: '10',
-                slug: '10-fbm',
+                slug: '10-perlin-gradient-noise',
                 number: '10',
+                part: 'Part III — Procedural Patterns & Noise',
+                title: 'Perlin & Gradient Noise',
+                subtitle: 'Continuous Noise, Bilinear Smoothing & Simplex',
+                description: 'Construct smooth, continuous natural noise fields by interpolating grid gradients with smoothstep curves to simulate wind, smoke, and natural turbulence.',
+                concepts: ['Gradient Noise', 'Perlin Noise', 'Bilinear Smoothing', 'Domain Displacement'],
+                isReady: false
+            },
+            {
+                id: '11',
+                slug: '11-cellular-noise',
+                number: '11',
+                part: 'Part III — Procedural Patterns & Noise',
+                title: 'Cellular & Worley Noise',
+                subtitle: 'Voronoi Diagrams, Metric Distances & Organic Cells',
+                description: 'Compute distance to closest feature points across neighboring grid cells to generate natural biological textures: water caustics, reptile scales, and cracked stone.',
+                concepts: ['Worley Noise', 'Voronoi Diagrams', 'Distance Metrics', 'Biomorphic Textures'],
+                isReady: false
+            },
+            {
+                id: '12',
+                slug: '12-fbm',
+                number: '12',
                 part: 'Part III — Procedural Patterns & Noise',
                 title: 'Fractional Brownian Motion (fBm)',
                 subtitle: 'Octaves, Lacunarity, Gain & Domain Warping',
                 description: 'Layer noise octaves at increasing frequencies and diminishing amplitudes to create clouds, terrain, fire, and liquid domain-warped distortions.',
                 concepts: ['fBm', 'Octaves / Persistence', 'Lacunarity', 'Domain Warping', 'Smoke & Fire'],
+                isReady: false
+            },
+            {
+                id: '13',
+                slug: '13-animation-time',
+                number: '13',
+                part: 'Part IV — Practical Applications & FX',
+                title: 'Animation Dynamics & Time',
+                subtitle: 'Looping Time, Easing Curves & Wave Propagation',
+                description: 'Structure time with modulo loops, create rhythmic easing acceleration/deceleration, and choreograph complex kinetic procedural motions.',
+                concepts: ['Time Loops', 'Easing Curves', 'Phase Offsets', 'Kinetic Motion'],
+                isReady: false
+            },
+            {
+                id: '14',
+                slug: '14-image-effects',
+                number: '14',
+                part: 'Part IV — Practical Applications & FX',
+                title: 'Image Effects & Post-Processing',
+                subtitle: 'UV Distortion, Chromatic Aberration & Blur Filters',
+                description: 'Sample textures with texture2D, apply radial lens distortion, scanlines, chromatic color fringing, vignette falloff, and convolution blur kernels.',
+                concepts: ['texture2D', 'UV Distortion', 'Chromatic Aberration', 'Convolution Kernels'],
+                isReady: false
+            },
+            {
+                id: '15',
+                slug: '15-mini-projects',
+                number: '15',
+                part: 'Part IV — Practical Applications & FX',
+                title: '2D Showcase Projects',
+                subtitle: 'Generative Landscapes, Plasma & Retro FX',
+                description: 'Synthesize all foundational concepts into production-grade shaders: procedural sunset horizons, liquid plasma visualizers, and retro game backgrounds.',
+                concepts: ['Shader Composition', 'Layering Techniques', 'Atmospheric Scattering', 'Performance Optimization'],
+                isReady: false
+            },
+            {
+                id: '16',
+                slug: '16-lighting-shadows',
+                number: '16',
+                part: 'Part V — Advanced 2D Techniques',
+                title: '2D Lighting & Soft Shadows',
+                subtitle: '2D Raymarching, Penumbra Shadows & Ambient Occlusion',
+                description: 'Step light rays through 2D distance fields to cast realistic point lights, dynamic volumetric cones, penumbra soft shadows, and ambient contact shading.',
+                concepts: ['2D Raymarching', 'Penumbra Factor', 'Soft Shadows', '2D Ambient Occlusion', 'Volumetric Rays'],
+                isReady: false
+            },
+            {
+                id: '17',
+                slug: '17-fractals-complex',
+                number: '17',
+                part: 'Part V — Advanced 2D Techniques',
+                title: '2D Fractals & Complex Numbers',
+                subtitle: 'Mandelbrot, Julia Sets & Kaleidoscopic IFS',
+                description: 'Perform complex number arithmetic in GLSL to render the Mandelbrot set, Julia sets, smooth escape-time coloring, and kaleidoscopic folding systems (KIFS).',
+                concepts: ['Complex Numbers', 'Mandelbrot Set', 'Julia Sets', 'Orbit Traps', 'KIFS Folding'],
+                isReady: false
+            },
+            {
+                id: '18',
+                slug: '18-multipass-simulation',
+                number: '18',
+                part: 'Part V — Advanced 2D Techniques',
+                title: 'Multi-Pass Shaders & Simulation',
+                subtitle: 'FBO Double-Buffering, Game of Life & Reaction-Diffusion',
+                description: 'Harness Framebuffer Objects (FBOs) and ping-pong render targets to maintain state across frames, creating Conway’s Game of Life, fluid trails, and Gray-Scott reaction-diffusion.',
+                concepts: ['Framebuffer Objects', 'Ping-Pong Buffering', 'State Persistence', 'Conway Game of Life', 'Reaction-Diffusion'],
                 isReady: false
             }
         ];
@@ -456,8 +544,10 @@ void main() {
                     // Category filter
                     if (selectedCategory === 'ready' && !ch.isReady) return false;
                     if (selectedCategory === 'foundations' && !ch.part.includes('Foundations')) return false;
-                    if (selectedCategory === 'shapes' && !ch.part.includes('Colors & Shapes')) return false;
-                    if (selectedCategory === 'noise' && !ch.part.includes('Noise')) return false;
+                    if (selectedCategory === 'shapes' && !ch.part.includes('Shapes') && !ch.part.includes('Geometry')) return false;
+                    if (selectedCategory === 'noise' && !ch.part.includes('Noise') && !ch.part.includes('Patterns')) return false;
+                    if (selectedCategory === 'applications' && !ch.part.includes('Applications') && !ch.part.includes('FX')) return false;
+                    if (selectedCategory === 'advanced' && !ch.part.includes('Advanced')) return false;
 
                     // Search query filter
                     if (searchQuery.trim()) {
@@ -570,7 +660,7 @@ void main() {
                                 border: '1px solid #30363d',
                                 fontSize: '13px'
                             }}>
-                                <span>📚 <strong>10</strong> Course Chapters</span>
+                                <span>📚 <strong>18</strong> Course Chapters</span>
                             </div>
                             <button
                                 onClick={handleOpenSyllabus}
@@ -615,8 +705,10 @@ void main() {
                                 { id: 'all', label: 'All Chapters' },
                                 { id: 'ready', label: '🎮 Ready to Play' },
                                 { id: 'foundations', label: 'Part I: Foundations' },
-                                { id: 'shapes', label: 'Part II: Shapes' },
-                                { id: 'noise', label: 'Part III: Noise' }
+                                { id: 'shapes', label: 'Part II: Shapes & SDFs' },
+                                { id: 'noise', label: 'Part III: Noise & Patterns' },
+                                { id: 'applications', label: 'Part IV: FX & Projects' },
+                                { id: 'advanced', label: 'Part V: Advanced & Sim' }
                             ].map(cat => (
                                 <button
                                     key={cat.id}

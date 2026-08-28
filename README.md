@@ -37,11 +37,19 @@ Full curriculum outline is documented in [`SYLLABUS.md`](./SYLLABUS.md).
 | **03** | **Shaping Functions** | ✅ Ready | `step()`, `smoothstep()`, `pow()`, `fract()`, `abs()` |
 | **04** | **Colors & Color Spaces** | ✅ Ready | HSB/HSL to RGB, Polar coordinates, Cosine palettes |
 | **05** | **2D Shapes & Signed Distance Fields** | 🗓️ Planned | SDFs, `length()`, Circles, Rectangles, Boolean operations |
-| **06** | **Matrices & Coordinate Transforms** | 🗓️ Planned | `mat2`, Rotation, Translation, Scale, Space deformation |
-| **07** | **Patterns & Tiling** | 🗓️ Planned | Grid tiling, Brick offsets, Truchet tiles |
-| **08** | **Randomness & Value Noise** | 🗓️ Planned | Pseudo-random hashing, 1D & 2D Value noise |
-| **09** | **Cellular & Worley Noise** | 🗓️ Planned | Voronoi diagrams, Organic textures, Metric distances |
-| **10** | **Fractional Brownian Motion (fBm)** | 🗓️ Planned | Octaves, Domain warping, Procedural terrain/clouds |
+| **06** | **Advanced SDFs & CSG Geometry** | 🗓️ Planned | `smin`, Rounding, Onion outlines, Smooth Booleans |
+| **07** | **Matrices & Coordinate Transforms** | 🗓️ Planned | `mat2`, Rotation, Translation, Scale, Space deformation |
+| **08** | **Patterns & Tiling** | 🗓️ Planned | Grid tiling, Brick offsets, Truchet tiles |
+| **09** | **Randomness & Hash Functions** | 🗓️ Planned | Pseudo-random hashing, 1D & 2D Value noise |
+| **10** | **Perlin & Gradient Noise** | 🗓️ Planned | Continuous noise, Bilinear smoothing, Terrain distortion |
+| **11** | **Cellular & Worley Noise** | 🗓️ Planned | Voronoi diagrams, Organic textures, Metric distances |
+| **12** | **Fractional Brownian Motion (fBm)** | 🗓️ Planned | Octaves, Domain warping, Procedural terrain/clouds |
+| **13** | **Animation Dynamics & Time** | 🗓️ Planned | Looping time, Easing curves, Kinetic wave propagation |
+| **14** | **Image Effects & Post-Processing** | 🗓️ Planned | UV distortion, Chromatic aberration, Bloom, Blur filters |
+| **15** | **2D Showcase Projects** | 🗓️ Planned | Generative landscapes, Plasma, Procedural backgrounds |
+| **16** | **2D Lighting & Soft Shadows** | 🗓️ Planned | 2D Raymarching, Penumbra soft shadows, Ambient occlusion |
+| **17** | **2D Fractals & Complex Numbers** | 🗓️ Planned | Mandelbrot/Julia sets, Orbit traps, KIFS folding |
+| **18** | **Multi-Pass Shaders & Simulation** | 🗓️ Planned | FBO double buffering, Game of Life, Reaction-Diffusion |
 
 ---
 

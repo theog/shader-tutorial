@@ -236,6 +236,53 @@ Based on concepts from [The Book of Shaders](https://thebookofshaders.com/) by P
 
 ---
 
+## Part V — Advanced 2D Techniques
+
+### Chapter 16: 2D Lighting, Soft Shadows & Raymarching
+
+**Topics:**
+- 2D Raymarching: stepping along light rays using Signed Distance Fields
+- Casting hard vs soft penumbra shadows in 2D
+- Point lights, spotlights, and directional ambient light
+- Ambient occlusion in 2D distance fields
+- Volumetric light rays (God rays in 2D)
+
+**Key Concepts:** 2D Raymarching, `min()` step traversal, penumbra factor, 2D shadow attenuation, ambient occlusion
+
+**Interactive App:** 2D Light studio — move light sources around SDF obstacles, adjust shadow softness and ambient glow in real time
+
+---
+
+### Chapter 17: 2D Fractals, Complex Numbers & KIFS
+
+**Topics:**
+- Complex number arithmetic in GLSL ($z_{n+1} = z_n^2 + c$)
+- The Mandelbrot Set and Julia Sets
+- Smooth coloring and continuous potential formulas
+- Orbit traps for organic fractal texturing
+- Kaleidoscopic Iterated Function Systems (KIFS) in 2D
+
+**Key Concepts:** Iterative fractals, complex multiplication, escape time, orbit traps, fold symmetry
+
+**Interactive App:** Fractal explorer — smooth zoom into the Mandelbrot/Julia set, adjust max iterations, tweak orbit trap colors
+
+---
+
+### Chapter 18: Multi-Pass Shaders, Ping-Pong Buffers & Simulation
+
+**Topics:**
+- The Framebuffer Object (FBO) and render-to-texture
+- State persistence in shaders (Ping-pong double buffering)
+- Cellular Automata: Conway's Game of Life on the GPU
+- Gray-Scott Reaction-Diffusion simulations (organic skin, coral, chemical patterns)
+- 2D Fluid smoke trails & mouse velocity advection
+
+**Key Concepts:** FBOs, render textures, ping-pong buffering, discrete laplacian kernel, reaction-diffusion
+
+**Interactive App:** GPU Simulation lab — paint chemicals/cells with mouse, adjust feed/kill rates, toggle Game of Life vs Reaction-Diffusion
+
+---
+
 ## Appendix
 
 ### A: GLSL Quick Reference
