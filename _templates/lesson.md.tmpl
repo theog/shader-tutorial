@@ -1,0 +1,64 @@
+# Chapter {{CHAPTER_NUM}}: {{CHAPTER_TITLE}}
+
+## Overview
+
+{{OVERVIEW_PLACEHOLDER}}
+
+---
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| {{CONCEPT_1}} | {{DESCRIPTION_1}} |
+| {{CONCEPT_2}} | {{DESCRIPTION_2}} |
+| {{CONCEPT_3}} | {{DESCRIPTION_3}} |
+
+---
+
+## Lesson
+
+### {{SECTION_1_TITLE}}
+
+{{SECTION_1_CONTENT}}
+
+```glsl
+// Example shader code
+precision mediump float;
+
+uniform vec2 u_resolution;
+uniform float u_time;
+
+void main() {
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+    vec3 color = vec3(0.0);
+
+    // {{EXAMPLE_COMMENT}}
+
+    gl_FragColor = vec4(color, 1.0);
+}
+```
+
+### {{SECTION_2_TITLE}}
+
+{{SECTION_2_CONTENT}}
+
+### {{SECTION_3_TITLE}}
+
+{{SECTION_3_CONTENT}}
+
+---
+
+## Exercises
+
+1. {{EXERCISE_1}}
+2. {{EXERCISE_2}}
+3. {{EXERCISE_3}}
+
+---
+
+## Summary
+
+{{SUMMARY_PLACEHOLDER}}
+
+**Next up:** [Chapter {{NEXT_CHAPTER_NUM}}: {{NEXT_CHAPTER_TITLE}}](../{{NEXT_CHAPTER_DIR}}/lesson.md)

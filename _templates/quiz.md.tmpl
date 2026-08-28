@@ -1,0 +1,91 @@
+# Quiz — Chapter {{CHAPTER_NUM}}: {{CHAPTER_TITLE}}
+
+Test your understanding of this chapter's concepts.
+
+---
+
+## Multiple Choice
+
+### Q1: {{MC_QUESTION_1}}
+
+- [ ] A) {{MC_1_A}}
+- [ ] B) {{MC_1_B}}
+- [ ] C) {{MC_1_C}}
+- [ ] D) {{MC_1_D}}
+
+### Q2: {{MC_QUESTION_2}}
+
+- [ ] A) {{MC_2_A}}
+- [ ] B) {{MC_2_B}}
+- [ ] C) {{MC_2_C}}
+- [ ] D) {{MC_2_D}}
+
+### Q3: {{MC_QUESTION_3}}
+
+- [ ] A) {{MC_3_A}}
+- [ ] B) {{MC_3_B}}
+- [ ] C) {{MC_3_C}}
+- [ ] D) {{MC_3_D}}
+
+---
+
+## True or False
+
+### Q4: {{TF_QUESTION_1}}
+
+- [ ] True
+- [ ] False
+
+### Q5: {{TF_QUESTION_2}}
+
+- [ ] True
+- [ ] False
+
+---
+
+## Code Challenges
+
+### Q6: {{CODE_CHALLENGE_1}}
+
+Write a fragment shader that {{CODE_CHALLENGE_1_DESCRIPTION}}.
+
+```glsl
+// Your shader here
+precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+
+void main() {
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+    vec3 color = vec3(0.0);
+
+    // TODO: implement
+
+    gl_FragColor = vec4(color, 1.0);
+}
+```
+
+### Q7: {{CODE_CHALLENGE_2}}
+
+{{CODE_CHALLENGE_2_DESCRIPTION}}
+
+```glsl
+// Your shader here
+```
+
+---
+
+## Answers
+
+<details>
+<summary>Click to reveal answers</summary>
+
+1. {{ANSWER_1}}
+2. {{ANSWER_2}}
+3. {{ANSWER_3}}
+4. {{ANSWER_4}}
+5. {{ANSWER_5}}
+6. See `shaders/quiz-solution-1.frag`
+7. See `shaders/quiz-solution-2.frag`
+
+</details>

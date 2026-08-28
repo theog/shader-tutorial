@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Book of Shaders — Interactive 2D Companion</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #090d13;
+            color: #eaeaea;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        #root { min-height: 100vh; }
+        code {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            background: #161b22;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #79c0ff;
+        }
+        pre code {
+            padding: 0;
+            background: transparent;
+            color: inherit;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d1117;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #58a6ff;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- React, ReactDOM, Babel, and Marked for markdown parsing -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/marked@9.1.6/lib/marked.umd.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+        // ============================================================
+        // Live Mini Shader Preview Canvas
+        // ============================================================
+        function MiniShaderCanvas({ fragmentSource, width = 280, height = 180 }) {
+            const canvasRef = useRef(null);
+            const glRef = useRef(null);
+            const programRef = useRef(null);
+            const animFrameRef = useRef(null);
+            const startTimeRef = useRef(Date.now());
+            const mouseRef = useRef([width / 2, height / 2]);
+
+            const vertexShaderSource = `
+                attribute vec2 a_position;
+                void main() { gl_Position = vec4(a_position, 0.0, 1.0); }
+            `;
+
+            const compileShader = useCallback((gl, type, source) => {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    gl.deleteShader(shader);
+                    return null;
+                }
+                return shader;
+            }, []);
+
+            const buildProgram = useCallback((gl, fragSrc) => {
+                const vs = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+                const fs = compileShader(gl, gl.FRAGMENT_SHADER, fragSrc);
+                if (!vs || !fs) return null;
+
+                const program = gl.createProgram();
+                gl.attachShader(program, vs);
+                gl.attachShader(program, fs);
+                gl.linkProgram(program);
+                if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                    gl.deleteProgram(program);
+                    return null;
+                }
+                return program;
+            }, [compileShader]);
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (!gl) return;
+                glRef.current = gl;
+
+                const positionBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.bufferData(
+                    gl.ARRAY_BUFFER,
+                    new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+                    gl.STATIC_DRAW
+                );
+
+                const program = buildProgram(gl, fragmentSource);
+                if (!program) return;
+                programRef.current = program;
+
+                let isMounted = true;
+                const render = () => {
+                    if (!isMounted || !glRef.current || !programRef.current) return;
+                    const gl = glRef.current;
+                    const prog = programRef.current;
+
+                    gl.viewport(0, 0, width, height);
+                    gl.useProgram(prog);
+
+                    const posAttr = gl.getAttribLocation(prog, 'a_position');
+                    gl.enableVertexAttribArray(posAttr);
+                    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                    gl.vertexAttribPointer(posAttr, 2, gl.FLOAT, false, 0, 0);
+
+                    const uRes = gl.getUniformLocation(prog, 'u_resolution');
+                    if (uRes) gl.uniform2f(uRes, width, height);
+
+                    const uTime = gl.getUniformLocation(prog, 'u_time');
+                    if (uTime) gl.uniform1f(uTime, (Date.now() - startTimeRef.current) / 1000.0);
+
+                    const uMouse = gl.getUniformLocation(prog, 'u_mouse');
+                    if (uMouse) gl.uniform2f(uMouse, mouseRef.current[0], mouseRef.current[1]);
+
+                    gl.drawArrays(gl.TRIANGLES, 0, 6);
+                    animFrameRef.current = requestAnimationFrame(render);
+                };
+
+                animFrameRef.current = requestAnimationFrame(render);
+
+                return () => {
+                    isMounted = false;
+                    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+                };
+            }, [fragmentSource, width, height, buildProgram]);
+
+            const handleMouseMove = (e) => {
+                const rect = canvasRef.current.getBoundingClientRect();
+                mouseRef.current = [e.clientX - rect.left, height - (e.clientY - rect.top)];
+            };
+
+            return (
+                <canvas
+                    ref={canvasRef}
+                    width={width}
+                    height={height}
+                    onMouseMove={handleMouseMove}
+                    style={{
+                        width: '100%',
+                        height: `${height}px`,
+                        display: 'block',
+                        borderRadius: '8px',
+                        background: '#0d1117'
+                    }}
+                />
+            );
+        }
+
+        // ============================================================
+        // Chapter Data
+        // ============================================================
+        const CHAPTERS_DATA = [
+            {
+                id: '01',
+                slug: '01-what-is-a-fragment-shader',
+                number: '01',
+                part: 'Part I — Foundations',
+                title: 'What Is a Fragment Shader?',
+                subtitle: 'Parallel Per-Pixel Thinking & The GPU Pipeline',
+                description: 'Discover how GPU parallelism differs radically from CPU loops, how every pixel runs the exact same code simultaneously, and how to use gl_FragCoord and normalization.',
+                concepts: ['gl_FragCoord', 'gl_FragColor', 'u_resolution', 'u_time', 'Parallelism'],
+                isReady: true,
+                appPath: 'chapters/01-what-is-a-fragment-shader/app/index.html',
+                lessonPath: 'chapters/01-what-is-a-fragment-shader/lesson.md',
+                quizPath: 'chapters/01-what-is-a-fragment-shader/quiz.md',
+                previewShader: `precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+void main() {
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+    float blue = 0.5 + 0.5 * sin(u_time * 2.0 + (st.x + st.y) * 4.0);
+    float stripes = 0.5 + 0.5 * sin(st.x * 20.0 + u_time * 3.0);
+    vec3 color = vec3(st.x, st.y * stripes, blue);
+    gl_FragColor = vec4(color, 1.0);
+}`
+            },
+            {
+                id: '02',
+                slug: '02-hello-world-your-first-shader',
+                number: '02',
+                part: 'Part I — Foundations',
+                title: 'Hello World — Your First Shader',
+                subtitle: 'Uniforms, Coordinate Spaces & Gradients',
+                description: 'Master GLSL uniform inputs (u_resolution, u_time, u_mouse), transform screen pixels into normalized (0..1) and centered (-1..1) spaces, and build smooth color gradients.',
+                concepts: ['uniform', 'vec2/vec3/vec4', 'u_mouse', 'Normalized Coords', 'Gradients'],
+                isReady: true,
+                appPath: 'chapters/02-hello-world-your-first-shader/app/index.html',
+                lessonPath: 'chapters/02-hello-world-your-first-shader/lesson.md',
+                quizPath: 'chapters/02-hello-world-your-first-shader/quiz.md',
+                previewShader: `precision mediump float;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+uniform float u_time;
+void main() {
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+    vec2 mouse = u_mouse / u_resolution;
+    float dist = distance(st, mouse);
+    float glow = 1.0 - smoothstep(0.0, 0.4, dist);
+    vec3 col1 = vec3(0.1, 0.2, 0.5) + 0.2 * sin(u_time + st.xyx);
+    vec3 col2 = vec3(0.9, 0.4, 0.2);
+    vec3 base = mix(col1, col2, st.x + 0.2 * sin(st.y * 6.0 + u_time));
+    gl_FragColor = vec4(base + glow * vec3(0.4, 0.7, 1.0), 1.0);
+}`
+            },
+            {
+                id: '03',
+                slug: '03-shaping-functions',
+                number: '03',
+                part: 'Part I — Foundations',
+                title: 'Shaping Functions',
+                subtitle: 'Mathematical Curves as Visual Building Blocks',
+                description: 'Unlock 1D shaping functions — step, smoothstep, pow, sin, abs, and fract. Visualize mathematical equations as both 1D graphs and 2D procedural color fields.',
+                concepts: ['step()', 'smoothstep()', 'pow()', 'fract()', 'abs()', 'Function Plotting'],
+                isReady: true,
+                appPath: 'chapters/03-shaping-functions/app/index.html',
+                lessonPath: 'chapters/03-shaping-functions/lesson.md',
+                quizPath: 'chapters/03-shaping-functions/quiz.md',
+                previewShader: `precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+void main() {
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+    float y = 0.5 + 0.3 * sin(st.x * 6.28318 + u_time * 2.0);
+    float line = smoothstep(0.015, 0.0, abs(st.y - y));
+    vec3 bg = mix(vec3(0.05, 0.08, 0.15), vec3(0.12, 0.2, 0.3), st.y);
+    vec3 color = mix(bg, vec3(0.2, 0.9, 0.6), line);
+    gl_FragColor = vec4(color, 1.0);
+}`
+            },
+            {
+                id: '04',
+                slug: '04-color',
+                number: '04',
+                part: 'Part II — Colors & Shapes',
+                title: 'Colors & Color Spaces',
+                subtitle: 'RGB, HSB/HSL, Hue Wheels & Palettes',
+                description: 'Transition between RGB and HSB color spaces, build rainbow hue wheels, use mix() for non-linear color interpolation, and design procedural palettes.',
+                concepts: ['HSB to RGB', 'Hue Wheels', 'mix()', 'Color Palettes', 'Polar Coordinates'],
+                isReady: false,
+                previewShader: `precision mediump float;
+uniform vec2 u_resolution;
+uniform float u_time;
+vec3 hsb2rgb(in vec3 c){
+    vec3 rgb = clamp(abs(mod(c.x*6.0+vec3(0.0,4.0,2.0),6.0)-3.0)-1.0, 0.0, 1.0);
+    rgb = rgb*rgb*(3.0-2.0*rgb);
+    return c.z * mix(vec3(1.0), rgb, c.y);
+}
+void main() {
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+    vec2 toCenter = vec2(0.5)-st;
+    float angle = atan(toCenter.y,toCenter.x);
+    float radius = length(toCenter)*2.0;
+    vec3 color = hsb2rgb(vec3((angle/6.28318)+0.5 + u_time*0.1, radius, 1.0));
+    gl_FragColor = vec4(color, 1.0);
+}`
+            },
+            {
+                id: '05',
+                slug: '05-shapes',
+                number: '05',
+                part: 'Part II — Colors & Shapes',
+                title: '2D Shapes & Signed Distance Fields',
+                subtitle: 'Lines, Circles, Rectangles & Distance Fields',
+                description: 'Learn Signed Distance Functions (SDFs) to draw crisp or antialiased geometric primitives: circles via length(), rectangles via step()/abs(), and boolean operations.',
+                concepts: ['length()', 'distance()', 'SDF Basics', 'Union/Intersect', 'Anti-aliasing'],
+                isReady: false
+            },
+            {
+                id: '06',
+                slug: '06-matrices-transformations',
+                number: '06',
+                part: 'Part II — Colors & Shapes',
+                title: 'Matrices & Coordinate Transforms',
+                subtitle: 'Translate, Rotate, Scale & Space Deformation',
+                description: 'Apply 2D matrix transformations (mat2) to rotate coordinate spaces around arbitrary pivots, scale space, and create dynamic geometric motion.',
+                concepts: ['mat2', 'Rotation', 'Translation', 'Scale', 'Pivot Space'],
+                isReady: false
+            },
+            {
+                id: '07',
+                slug: '07-patterns',
+                number: '07',
+                part: 'Part III — Procedural Patterns & Noise',
+                title: 'Patterns & Tiling',
+                subtitle: 'Repetition, Offsets & Truchet Tiles',
+                description: 'Tile 2D space with fract() and floor(), apply alternating row/column offsets (brick patterns), and create labyrinthine Truchet maze generators.',
+                concepts: ['fract() & floor()', 'Grid Cells', 'Brick Offsets', 'Truchet Tiles', 'Symmetry'],
+                isReady: false
+            },
+            {
+                id: '08',
+                slug: '08-random-noise',
+                number: '08',
+                part: 'Part III — Procedural Patterns & Noise',
+                title: 'Randomness & Value Noise',
+                subtitle: 'Pseudo-Randomness, 1D & 2D Smooth Noise',
+                description: 'Generate deterministic pseudo-random values from sinusoidal hashes, interpolate grid corners with smoothstep to construct 1D/2D value noise fields.',
+                concepts: ['fract(sin()) Hash', '1D/2D Noise', 'Bilinear Interpolation', 'Organic Textures'],
+                isReady: false
+            },
+            {
+                id: '09',
+                slug: '09-cellular-noise',
+                number: '09',
+                part: 'Part III — Procedural Patterns & Noise',
+                title: 'Cellular & Worley Noise',
+                subtitle: 'Voronoi Diagrams, Metric Distances & Organic Cells',
+                description: 'Compute distance to closest feature points across neighboring grid cells to generate natural biological textures: water caustics, reptile scales, and stone.',
+                concepts: ['Worley Noise', 'Voronoi Diagrams', 'Distance Metrics', 'Biomorphic Textures'],
+                isReady: false
+            },
+            {
+                id: '10',
+                slug: '10-fbm',
+                number: '10',
+                part: 'Part III — Procedural Patterns & Noise',
+                title: 'Fractional Brownian Motion (fBm)',
+                subtitle: 'Octaves, Lacunarity, Gain & Domain Warping',
+                description: 'Layer noise octaves at increasing frequencies and diminishing amplitudes to create clouds, terrain, fire, and liquid domain-warped distortions.',
+                concepts: ['fBm', 'Octaves / Persistence', 'Lacunarity', 'Domain Warping', 'Smoke & Fire'],
+                isReady: false
+            }
+        ];
+
+        // ============================================================
+        // Markdown Viewer Modal Component
+        // ============================================================
+        function MarkdownModal({ title, subtitle, markdownContent, isLoading, onClose }) {
+            if (!markdownContent && !isLoading) return null;
+
+            return (
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    backdropFilter: 'blur(8px)',
+                    zIndex: 1000,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding: '20px'
+                }} onClick={onClose}>
+                    <div style={{
+                        background: '#0d1117',
+                        border: '1px solid #30363d',
+                        borderRadius: '12px',
+                        width: '100%',
+                        maxWidth: '900px',
+                        maxHeight: '90vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+                        overflow: 'hidden'
+                    }} onClick={e => e.stopPropagation()}>
+                        {/* Modal Header */}
+                        <div style={{
+                            padding: '16px 24px',
+                            borderBottom: '1px solid #30363d',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            background: '#161b22'
+                        }}>
+                            <div>
+                                <h2 style={{ fontSize: '18px', color: '#58a6ff', marginBottom: '2px' }}>{title}</h2>
+                                {subtitle && <p style={{ fontSize: '12px', color: '#8b949e' }}>{subtitle}</p>}
+                            </div>
+                            <button
+                                onClick={onClose}
+                                style={{
+                                    background: '#21262d',
+                                    border: '1px solid #30363d',
+                                    color: '#c9d1d9',
+                                    borderRadius: '6px',
+                                    padding: '6px 12px',
+                                    fontSize: '13px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                ✕ Close
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div style={{
+                            padding: '24px',
+                            overflowY: 'auto',
+                            lineHeight: '1.7',
+                            fontSize: '14px',
+                            color: '#c9d1d9'
+                        }}>
+                            {isLoading ? (
+                                <div style={{ textAlign: 'center', padding: '40px', color: '#8b949e' }}>
+                                    Loading document content...
+                                </div>
+                            ) : (
+                                <div
+                                    dangerouslySetInnerHTML={{
+                                        __html: window.marked ? window.marked.parse(markdownContent) : markdownContent
+                                    }}
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '12px'
+                                    }}
+                                />
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ============================================================
+        // Main Portal Component
+        // ============================================================
+        function MainApp() {
+            const [selectedCategory, setSelectedCategory] = useState('all');
+            const [searchQuery, setSearchQuery] = useState('');
+            const [modalData, setModalData] = useState({ isOpen: false, title: '', subtitle: '', content: '', isLoading: false });
+
+            const filteredChapters = useMemo(() => {
+                return CHAPTERS_DATA.filter(ch => {
+                    // Category filter
+                    if (selectedCategory === 'ready' && !ch.isReady) return false;
+                    if (selectedCategory === 'foundations' && !ch.part.includes('Foundations')) return false;
+                    if (selectedCategory === 'shapes' && !ch.part.includes('Colors & Shapes')) return false;
+                    if (selectedCategory === 'noise' && !ch.part.includes('Noise')) return false;
+
+                    // Search query filter
+                    if (searchQuery.trim()) {
+                        const q = searchQuery.toLowerCase();
+                        const matchTitle = ch.title.toLowerCase().includes(q);
+                        const matchSubtitle = ch.subtitle.toLowerCase().includes(q);
+                        const matchDesc = ch.description.toLowerCase().includes(q);
+                        const matchConcepts = ch.concepts?.some(c => c.toLowerCase().includes(q));
+                        return matchTitle || matchSubtitle || matchDesc || matchConcepts;
+                    }
+                    return true;
+                });
+            }, [selectedCategory, searchQuery]);
+
+            const handleOpenMarkdown = async (title, subtitle, filePath) => {
+                setModalData({ isOpen: true, title, subtitle, content: '', isLoading: true });
+                try {
+                    const response = await fetch(filePath);
+                    if (!response.ok) throw new Error('Failed to load file');
+                    const text = await response.text();
+                    setModalData({ isOpen: true, title, subtitle, content: text, isLoading: false });
+                } catch (err) {
+                    setModalData({
+                        isOpen: true,
+                        title,
+                        subtitle,
+                        content: `**Note:** Unable to load \`${filePath}\` dynamically. Please open the file directly in your editor or run the local HTTP server (\`./scripts/serve.sh\`).`,
+                        isLoading: false
+                    });
+                }
+            };
+
+            const handleOpenSyllabus = () => {
+                handleOpenMarkdown('Curriculum Syllabus', 'Full 2D Shader Tutorial Course Outline', 'SYLLABUS.md');
+            };
+
+            return (
+                <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px 64px' }}>
+                    {/* Header Banner */}
+                    <header style={{
+                        textAlign: 'center',
+                        marginBottom: '40px',
+                        padding: '40px 24px',
+                        background: 'radial-gradient(ellipse at top, #162235 0%, #090d13 70%)',
+                        borderRadius: '16px',
+                        border: '1px solid #21262d',
+                        position: 'relative'
+                    }}>
+                        <div style={{
+                            display: 'inline-block',
+                            padding: '4px 12px',
+                            background: 'rgba(88, 166, 255, 0.1)',
+                            border: '1px solid rgba(88, 166, 255, 0.3)',
+                            borderRadius: '20px',
+                            color: '#58a6ff',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            marginBottom: '16px',
+                            letterSpacing: '0.5px'
+                        }}>
+                            BASED ON THE BOOK OF SHADERS
+                        </div>
+                        <h1 style={{
+                            fontSize: '36px',
+                            fontWeight: '800',
+                            color: '#ffffff',
+                            marginBottom: '12px',
+                            letterSpacing: '-0.5px'
+                        }}>
+                            2D Shader Tutorial & Interactive Hub
+                        </h1>
+                        <p style={{
+                            fontSize: '16px',
+                            color: '#8b949e',
+                            maxWidth: '720px',
+                            margin: '0 auto 24px',
+                            lineHeight: '1.6'
+                        }}>
+                            A hands-on journey from the fundamentals of GPU parallelism and coordinate spaces to advanced procedural noise, distance fields, and generative animations.
+                        </p>
+
+                        {/* Quick Stats & Syllabus Button */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '16px'
+                        }}>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                background: '#161b22',
+                                padding: '6px 14px',
+                                borderRadius: '8px',
+                                border: '1px solid #30363d',
+                                fontSize: '13px'
+                            }}>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3fb950', display: 'inline-block' }}></span>
+                                <span><strong>3</strong> Playgrounds Ready</span>
+                            </div>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                background: '#161b22',
+                                padding: '6px 14px',
+                                borderRadius: '8px',
+                                border: '1px solid #30363d',
+                                fontSize: '13px'
+                            }}>
+                                <span>📚 <strong>10</strong> Course Chapters</span>
+                            </div>
+                            <button
+                                onClick={handleOpenSyllabus}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    background: '#238636',
+                                    color: '#ffffff',
+                                    border: '1px solid rgba(240,246,252,0.1)',
+                                    padding: '7px 16px',
+                                    borderRadius: '8px',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#2ea043'}
+                                onMouseLeave={e => e.currentTarget.style.background = '#238636'}
+                            >
+                                📋 View Full Syllabus
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* Filter & Search Bar */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '16px',
+                        marginBottom: '32px',
+                        padding: '16px',
+                        background: '#0d1117',
+                        borderRadius: '12px',
+                        border: '1px solid #21262d'
+                    }}>
+                        {/* Category Pills */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {[
+                                { id: 'all', label: 'All Chapters' },
+                                { id: 'ready', label: '🎮 Ready to Play' },
+                                { id: 'foundations', label: 'Part I: Foundations' },
+                                { id: 'shapes', label: 'Part II: Shapes' },
+                                { id: 'noise', label: 'Part III: Noise' }
+                            ].map(cat => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setSelectedCategory(cat.id)}
+                                    style={{
+                                        padding: '6px 14px',
+                                        borderRadius: '20px',
+                                        fontSize: '13px',
+                                        fontWeight: selectedCategory === cat.id ? '600' : '400',
+                                        background: selectedCategory === cat.id ? '#58a6ff' : '#161b22',
+                                        color: selectedCategory === cat.id ? '#0d1117' : '#c9d1d9',
+                                        border: '1px solid',
+                                        borderColor: selectedCategory === cat.id ? '#58a6ff' : '#30363d',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s ease'
+                                    }}
+                                >
+                                    {cat.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Search Input */}
+                        <div style={{ minWidth: '260px', flex: '1', maxWidth: '360px' }}>
+                            <input
+                                type="text"
+                                placeholder="Search by topic, GLSL concept (e.g. step, uniform)..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 14px',
+                                    background: '#161b22',
+                                    color: '#eaeaea',
+                                    border: '1px solid #30363d',
+                                    borderRadius: '8px',
+                                    fontSize: '13px',
+                                    outline: 'none'
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Chapters Grid */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+                        gap: '24px'
+                    }}>
+                        {filteredChapters.map(chapter => (
+                            <div
+                                key={chapter.id}
+                                style={{
+                                    background: '#0d1117',
+                                    border: '1px solid #21262d',
+                                    borderRadius: '12px',
+                                    overflow: 'hidden',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    transition: 'transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.transform = 'translateY(-3px)';
+                                    e.currentTarget.style.borderColor = '#388bfd';
+                                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)';
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.borderColor = '#21262d';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+                                }}
+                            >
+                                {/* Top live canvas or preview graphic */}
+                                <div style={{ position: 'relative', background: '#010409', borderBottom: '1px solid #21262d' }}>
+                                    {chapter.previewShader ? (
+                                        <MiniShaderCanvas fragmentSource={chapter.previewShader} height={180} />
+                                    ) : (
+                                        <div style={{
+                                            height: '180px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: 'linear-gradient(135deg, #161b22 0%, #0d1117 100%)',
+                                            color: '#6e7681'
+                                        }}>
+                                            <span style={{ fontSize: '32px', marginBottom: '8px' }}>🔒</span>
+                                            <span style={{ fontSize: '13px', fontWeight: '500' }}>Roadmap Chapter</span>
+                                        </div>
+                                    )}
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '12px',
+                                        left: '12px',
+                                        background: 'rgba(13, 17, 23, 0.85)',
+                                        backdropFilter: 'blur(6px)',
+                                        padding: '4px 10px',
+                                        borderRadius: '6px',
+                                        fontSize: '11px',
+                                        fontWeight: '700',
+                                        color: '#58a6ff',
+                                        border: '1px solid rgba(88, 166, 255, 0.2)'
+                                    }}>
+                                        CHAPTER {chapter.number}
+                                    </div>
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '12px',
+                                        right: '12px',
+                                        background: chapter.isReady ? 'rgba(35, 134, 54, 0.85)' : 'rgba(110, 118, 129, 0.85)',
+                                        backdropFilter: 'blur(6px)',
+                                        padding: '4px 10px',
+                                        borderRadius: '6px',
+                                        fontSize: '11px',
+                                        fontWeight: '600',
+                                        color: '#ffffff'
+                                    }}>
+                                        {chapter.isReady ? '✓ READY' : 'PLANNED'}
+                                    </div>
+                                </div>
+
+                                {/* Content section */}
+                                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: '1' }}>
+                                    <div style={{ fontSize: '12px', color: '#8b949e', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                        {chapter.part}
+                                    </div>
+                                    <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#e6edf3', marginBottom: '6px' }}>
+                                        {chapter.title}
+                                    </h3>
+                                    <h4 style={{ fontSize: '13px', fontWeight: '500', color: '#79c0ff', marginBottom: '12px' }}>
+                                        {chapter.subtitle}
+                                    </h4>
+                                    <p style={{ fontSize: '13px', color: '#8b949e', lineHeight: '1.5', marginBottom: '16px', flex: '1' }}>
+                                        {chapter.description}
+                                    </p>
+
+                                    {/* Concept Tags */}
+                                    {chapter.concepts && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '20px' }}>
+                                            {chapter.concepts.map(concept => (
+                                                <code key={concept}>{concept}</code>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    {chapter.isReady ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            <a
+                                                href={chapter.appPath}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '8px',
+                                                    padding: '10px 16px',
+                                                    background: '#238636',
+                                                    color: '#ffffff',
+                                                    borderRadius: '8px',
+                                                    textDecoration: 'none',
+                                                    fontWeight: '600',
+                                                    fontSize: '13px',
+                                                    transition: 'background 0.2s ease',
+                                                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                                                }}
+                                                onMouseEnter={e => e.currentTarget.style.background = '#2ea043'}
+                                                onMouseLeave={e => e.currentTarget.style.background = '#238636'}
+                                            >
+                                                <span>🚀</span> Launch Interactive Playground
+                                            </a>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => handleOpenMarkdown(`Chapter ${chapter.number}: Lesson`, chapter.title, chapter.lessonPath)}
+                                                    style={{
+                                                        padding: '8px 12px',
+                                                        background: '#161b22',
+                                                        color: '#c9d1d9',
+                                                        border: '1px solid #30363d',
+                                                        borderRadius: '6px',
+                                                        fontSize: '12px',
+                                                        fontWeight: '500',
+                                                        cursor: 'pointer',
+                                                        transition: 'background 0.15s ease'
+                                                    }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = '#21262d'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = '#161b22'}
+                                                >
+                                                    📖 Read Lesson
+                                                </button>
+                                                <button
+                                                    onClick={() => handleOpenMarkdown(`Chapter ${chapter.number}: Quiz`, chapter.title, chapter.quizPath)}
+                                                    style={{
+                                                        padding: '8px 12px',
+                                                        background: '#161b22',
+                                                        color: '#c9d1d9',
+                                                        border: '1px solid #30363d',
+                                                        borderRadius: '6px',
+                                                        fontSize: '12px',
+                                                        fontWeight: '500',
+                                                        cursor: 'pointer',
+                                                        transition: 'background 0.15s ease'
+                                                    }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = '#21262d'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = '#161b22'}
+                                                >
+                                                    ❓ Take Quiz
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div style={{
+                                            padding: '10px',
+                                            textAlign: 'center',
+                                            background: '#161b22',
+                                            borderRadius: '8px',
+                                            border: '1px dashed #30363d',
+                                            color: '#6e7681',
+                                            fontSize: '12px'
+                                        }}>
+                                            Generate via <code>./scripts/new-chapter.sh {chapter.number} "{chapter.title}"</code>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Footer */}
+                    <footer style={{
+                        marginTop: '64px',
+                        paddingTop: '24px',
+                        borderTop: '1px solid #21262d',
+                        textAlign: 'center',
+                        color: '#6e7681',
+                        fontSize: '13px'
+                    }}>
+                        <p style={{ marginBottom: '8px' }}>
+                            Interactive 2D Shader Companion • Inspired by <a href="https://thebookofshaders.com/" target="_blank" style={{ color: '#58a6ff', textDecoration: 'none' }}>The Book of Shaders</a>
+                        </p>
+                        <p style={{ fontSize: '11px' }}>
+                            Static client-side WebGL app. No server dependencies required.
+                        </p>
+                    </footer>
+
+                    {/* Markdown Modal */}
+                    {modalData.isOpen && (
+                        <MarkdownModal
+                            title={modalData.title}
+                            subtitle={modalData.subtitle}
+                            markdownContent={modalData.content}
+                            isLoading={modalData.isLoading}
+                            onClose={() => setModalData({ isOpen: false, title: '', subtitle: '', content: '', isLoading: false })}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<MainApp />);
+    </script>
+</body>
+</html>
