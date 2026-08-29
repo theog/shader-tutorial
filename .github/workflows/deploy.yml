@@ -24,6 +24,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Inject Google Analytics ID
+        env:
+          GA_ID: ${{ secrets.GA_MEASUREMENT_ID || vars.GA_MEASUREMENT_ID }}
+        run: |
+          if [ -n "$GA_ID" ]; then
+            echo "Injecting Google Analytics Measurement ID..."
+            sed -i "s/__GA_MEASUREMENT_ID__/$GA_ID/g" index.html
+          else
+            echo "No GA_MEASUREMENT_ID found, skipping analytics injection."
+          fi
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
