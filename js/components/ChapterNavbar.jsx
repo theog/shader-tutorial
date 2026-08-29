@@ -7,7 +7,8 @@ function ChapterNavbar({
     chapter,
     onOpenLesson = null,
     onOpenQuiz = null,
-    quizScore = null
+    quizScore = null,
+    isLessonRead = false
 }) {
     const [dropdownOpen, setDropdownOpen] = React.useState(false);
     const navRef = React.useRef(null);
@@ -153,9 +154,9 @@ function ChapterNavbar({
                     <button
                         onClick={onOpenLesson}
                         style={{
-                            background: '#21262d',
-                            border: '1px solid #30363d',
-                            color: '#c9d1d9',
+                            background: isLessonRead ? 'rgba(46, 160, 67, 0.15)' : '#21262d',
+                            border: isLessonRead ? '1px solid #3fb950' : '1px solid #30363d',
+                            color: isLessonRead ? '#3fb950' : '#c9d1d9',
                             padding: '6px 12px',
                             borderRadius: '6px',
                             fontSize: '12px',
@@ -166,7 +167,8 @@ function ChapterNavbar({
                             gap: '6px'
                         }}
                     >
-                        <span>📖</span> Lesson
+                        <span>{isLessonRead ? '✓' : '📖'}</span>
+                        <span>{isLessonRead ? 'Lesson Read' : 'Lesson'}</span>
                     </button>
                 )}
 

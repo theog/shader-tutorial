@@ -1,11 +1,12 @@
 /**
  * Reusable Chapter Card Component
- * Displays animated shader previews, status badges, quiz scores, concept tags, and launch buttons.
+ * Displays animated shader previews, status badges, quiz scores, lesson read status, concept tags, and launch buttons.
  */
 
 function ChapterCard({
     chapter,
     quizScore = null,
+    isLessonRead = false,
     onOpenLesson = null,
     onOpenQuiz = null
 }) {
@@ -73,28 +74,57 @@ function ChapterCard({
                     {chapter.isReady ? 'Ready' : 'Planned'}
                 </div>
 
-                {/* Quiz Score Badge if completed */}
-                {hasScore && (
-                    <div style={{
-                        position: 'absolute',
-                        top: '10px',
-                        left: '10px',
-                        padding: '4px 10px',
-                        borderRadius: '20px',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        background: quizScore.percent >= 80 ? 'rgba(46, 160, 67, 0.9)' : 'rgba(210, 153, 34, 0.9)',
-                        color: '#ffffff',
-                        backdropFilter: 'blur(4px)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                    }}>
-                        <span>{quizScore.percent >= 80 ? '⭐' : '📝'}</span>
-                        <span>Quiz: {quizScore.score}/{quizScore.total} ({quizScore.percent}%)</span>
-                    </div>
-                )}
+                {/* Left Badges Group: Lesson Read & Quiz Score */}
+                <div style={{
+                    position: 'absolute',
+                    top: '10px',
+                    left: '10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
+                }}>
+                    {/* Lesson Read Badge */}
+                    {isLessonRead && (
+                        <div style={{
+                            padding: '3px 8px',
+                            borderRadius: '20px',
+                            fontSize: '10.5px',
+                            fontWeight: '600',
+                            background: 'rgba(35, 134, 54, 0.9)',
+                            color: '#ffffff',
+                            backdropFilter: 'blur(4px)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            width: 'fit-content'
+                        }}>
+                            <span>📖</span>
+                            <span>Lesson Read</span>
+                        </div>
+                    )}
+
+                    {/* Quiz Score Badge if completed */}
+                    {hasScore && (
+                        <div style={{
+                            padding: '3px 8px',
+                            borderRadius: '20px',
+                            fontSize: '10.5px',
+                            fontWeight: '600',
+                            background: quizScore.percent >= 80 ? 'rgba(46, 160, 67, 0.9)' : 'rgba(210, 153, 34, 0.9)',
+                            color: '#ffffff',
+                            backdropFilter: 'blur(4px)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            width: 'fit-content'
+                        }}>
+                            <span>{quizScore.percent >= 80 ? '⭐' : '📝'}</span>
+                            <span>Quiz: {quizScore.score}/{quizScore.total}</span>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Content Section */}
@@ -152,19 +182,19 @@ function ChapterCard({
                                 onClick={() => onOpenLesson && onOpenLesson(chapter)}
                                 style={{
                                     padding: '8px 12px',
-                                    background: '#161b22',
-                                    color: '#c9d1d9',
-                                    border: '1px solid #30363d',
+                                    background: isLessonRead ? 'rgba(46, 160, 67, 0.15)' : '#161b22',
+                                    color: isLessonRead ? '#3fb950' : '#c9d1d9',
+                                    border: isLessonRead ? '1px solid rgba(63, 185, 80, 0.5)' : '1px solid #30363d',
                                     borderRadius: '6px',
                                     fontSize: '12px',
                                     fontWeight: '500',
                                     cursor: 'pointer',
-                                    transition: 'background 0.15s ease'
+                                    transition: 'all 0.15s ease'
                                 }}
                                 onMouseEnter={e => e.currentTarget.style.background = '#21262d'}
-                                onMouseLeave={e => e.currentTarget.style.background = '#161b22'}
+                                onMouseLeave={e => e.currentTarget.style.background = isLessonRead ? 'rgba(46, 160, 67, 0.15)' : '#161b22'}
                             >
-                                📖 Read Lesson
+                                {isLessonRead ? '✓ Lesson Read' : '📖 Read Lesson'}
                             </button>
                             <button
                                 onClick={() => onOpenQuiz && onOpenQuiz(chapter)}

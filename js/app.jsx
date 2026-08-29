@@ -1,6 +1,6 @@
 /**
  * Master React SPA Application & Hash Router
- * Handles routing, bookmarks, browser history, global score state, and modal readers.
+ * Handles routing, bookmarks, browser history, global score state, lesson completion tracking, and modal readers.
  */
 
 const { useState, useEffect, useMemo, useCallback } = React;
@@ -12,17 +12,24 @@ function App() {
     const [quizScores, setQuizScores] = useState(() => {
         return (typeof getSavedQuizScores === 'function') ? getSavedQuizScores() : {};
     });
+    const [completedLessons, setCompletedLessons] = useState(() => {
+        return (typeof getCompletedLessons === 'function') ? getCompletedLessons() : {};
+    });
 
     // Active Modal States for Quick Overlays on Hub
     const [activeLessonModal, setActiveLessonModal] = useState(null);
     const [activeQuizModal, setActiveQuizModal] = useState(null);
-    const [syllabusModalOpen, setSyllabusModalOpen] = useState(false);
 
     // Refresh quiz scores from storage
     const refreshScores = useCallback(() => {
         if (typeof getSavedQuizScores === 'function') {
             setQuizScores(getSavedQuizScores());
         }
+    }, []);
+
+    // Track completed lessons callback
+    const handleLessonCompleted = useCallback((chapterNum, status = true) => {
+        setCompletedLessons(prev => ({ ...prev, [chapterNum]: status }));
     }, []);
 
     // Listen to hash changes for client-side routing & browser Back/Forward
@@ -76,6 +83,7 @@ function App() {
 
     const readyChaptersCount = CHAPTERS_REGISTRY.filter(c => c.isReady).length;
     const completedQuizzesCount = Object.values(quizScores).filter(s => s && s.completed).length;
+    const completedLessonsCount = Object.values(completedLessons).filter(Boolean).length;
 
     // View 1: Chapter Playground
     if (route.view === 'chapter' && route.subView === 'playground') {
@@ -84,6 +92,8 @@ function App() {
                 chapterNum={route.chapterNum}
                 quizScore={quizScores[route.chapterNum]}
                 onScoreUpdated={refreshScores}
+                isLessonRead={!!completedLessons[route.chapterNum]}
+                onLessonCompleted={handleLessonCompleted}
             />
         );
     }
@@ -93,12 +103,19 @@ function App() {
         const ch = getChapterByNumber(route.chapterNum);
         return (
             <div style={{ minHeight: '100vh', background: '#090d13' }}>
-                <ChapterNavbar chapter={ch} quizScore={quizScores[route.chapterNum]} />
+                <ChapterNavbar
+                    chapter={ch}
+                    quizScore={quizScores[route.chapterNum]}
+                    isLessonRead={!!completedLessons[route.chapterNum]}
+                />
                 <div style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 20px' }}>
                     <MarkdownReader
                         title={`Chapter ${ch?.number}: ${ch?.title}`}
                         subtitle={ch?.subtitle}
+                        chapterNum={route.chapterNum}
                         filePath={`chapters/${ch?.slug}/lesson.md`}
+                        onLessonCompleted={handleLessonCompleted}
+                        initialCompleted={!!completedLessons[route.chapterNum]}
                         isModal={false}
                     />
                 </div>
@@ -111,8 +128,12 @@ function App() {
         const ch = getChapterByNumber(route.chapterNum);
         return (
             <div style={{ minHeight: '100vh', background: '#090d13' }}>
-                <ChapterNavbar chapter={ch} quizScore={quizScores[route.chapterNum]} />
-                <div style={{ maxWidth: '840px', margin: '0 auto', padding: '24px 20px' }}>
+                <ChapterNavbar
+                    chapter={ch}
+                    quizScore={quizScores[route.chapterNum]}
+                    isLessonRead={!!completedLessons[route.chapterNum]}
+                />
+                <div style={{ maxWidth: '980px', margin: '0 auto', padding: '24px 20px' }}>
                     <QuizRunner
                         chapterNum={route.chapterNum}
                         onScoreUpdated={refreshScores}
@@ -198,7 +219,7 @@ function App() {
                     justifyContent: 'center',
                     alignItems: 'center',
                     flexWrap: 'wrap',
-                    gap: '16px'
+                    gap: '14px'
                 }}>
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: '8px', background: '#161b22',
@@ -211,13 +232,13 @@ function App() {
                         display: 'flex', alignItems: 'center', gap: '8px', background: '#161b22',
                         padding: '6px 14px', borderRadius: '8px', border: '1px solid #30363d', fontSize: '13px'
                     }}>
-                        <span>🎯 <strong>{completedQuizzesCount} / {readyChaptersCount}</strong> Quizzes Passed</span>
+                        <span>📖 <strong>{completedLessonsCount} / {readyChaptersCount}</strong> Lessons Read</span>
                     </div>
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: '8px', background: '#161b22',
                         padding: '6px 14px', borderRadius: '8px', border: '1px solid #30363d', fontSize: '13px'
                     }}>
-                        <span>📚 <strong>18</strong> Course Chapters</span>
+                        <span>🎯 <strong>{completedQuizzesCount} / {readyChaptersCount}</strong> Quizzes Passed</span>
                     </div>
                     <button
                         onClick={() => window.location.hash = '#/syllabus'}
@@ -312,6 +333,7 @@ function App() {
                         key={chapter.id}
                         chapter={chapter}
                         quizScore={quizScores[chapter.number]}
+                        isLessonRead={!!completedLessons[chapter.number]}
                         onOpenLesson={ch => setActiveLessonModal(ch)}
                         onOpenQuiz={ch => setActiveQuizModal(ch)}
                     />
@@ -340,8 +362,11 @@ function App() {
                 <MarkdownReader
                     title={`Chapter ${activeLessonModal.number}: Lesson`}
                     subtitle={activeLessonModal.title}
+                    chapterNum={activeLessonModal.number}
                     filePath={`chapters/${activeLessonModal.slug}/lesson.md`}
                     onClose={() => setActiveLessonModal(null)}
+                    onLessonCompleted={handleLessonCompleted}
+                    initialCompleted={!!completedLessons[activeLessonModal.number]}
                     isModal={true}
                 />
             )}

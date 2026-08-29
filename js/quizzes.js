@@ -393,3 +393,26 @@ function clearQuizProgressFromStorage(chapterNum) {
         localStorage.removeItem(`shader_tutorial_quiz_progress_${chapterNum}`);
     } catch (e) {}
 }
+
+// Lesson completion storage helpers
+function getCompletedLessons() {
+    try {
+        const raw = localStorage.getItem('shader_tutorial_completed_lessons');
+        return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function saveLessonCompletedToStorage(chapterNum, isCompleted = true) {
+    try {
+        const existing = getCompletedLessons();
+        existing[chapterNum] = isCompleted;
+        localStorage.setItem('shader_tutorial_completed_lessons', JSON.stringify(existing));
+        return existing;
+    } catch (e) {
+        console.warn('Failed to save completed lesson to localStorage:', e);
+        return {};
+    }
+}
+

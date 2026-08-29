@@ -6,7 +6,9 @@
 function ChapterPlayground({
     chapterNum,
     quizScore = null,
-    onScoreUpdated = null
+    onScoreUpdated = null,
+    isLessonRead = false,
+    onLessonCompleted = null
 }) {
     const chapter = CHAPTERS_REGISTRY.find(c => c.number === chapterNum) || CHAPTERS_REGISTRY[0];
 
@@ -65,6 +67,7 @@ function ChapterPlayground({
                 onOpenLesson={() => setLessonOpen(true)}
                 onOpenQuiz={() => setQuizOpen(true)}
                 quizScore={quizScore}
+                isLessonRead={isLessonRead}
             />
 
             {/* Presets Toolbar */}
@@ -237,8 +240,11 @@ function ChapterPlayground({
                 <MarkdownReader
                     title={`Chapter ${chapter.number}: Lesson`}
                     subtitle={chapter.title}
+                    chapterNum={chapter.number}
                     filePath={`chapters/${chapter.slug}/lesson.md`}
                     onClose={() => setLessonOpen(false)}
+                    onLessonCompleted={onLessonCompleted}
+                    initialCompleted={isLessonRead}
                     isModal={true}
                 />
             )}
