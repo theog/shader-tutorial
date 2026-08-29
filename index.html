@@ -50,17 +50,17 @@
 
         const GA_ID = '__GA_MEASUREMENT_ID__';
         if (GA_ID && !GA_ID.startsWith('__')) {
-            gtag('config', GA_ID, { send_page_view: false });
+            gtag('config', GA_ID, { send_page_view: true });
 
-            function trackSPAView() {
+            function trackSPARoute() {
                 gtag('event', 'page_view', {
                     page_path: window.location.pathname + window.location.hash,
+                    page_location: window.location.href,
                     page_title: document.title
                 });
             }
 
-            window.addEventListener('hashchange', trackSPAView);
-            window.addEventListener('load', trackSPAView);
+            window.addEventListener('hashchange', trackSPARoute);
         }
     </script>
     <style>
