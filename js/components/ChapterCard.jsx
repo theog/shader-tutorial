@@ -1,16 +1,23 @@
 /**
  * Reusable Chapter Card Component
- * Displays animated shader previews, status badges, quiz scores, lesson read status, concept tags, and launch buttons.
+ * Displays animated shader previews, status badges, quiz progress, lesson read status, mastery progress bar, concept tags, and launch buttons.
  */
 
 function ChapterCard({
     chapter,
     quizScore = null,
+    quizProgress = null,
     isLessonRead = false,
     onOpenLesson = null,
     onOpenQuiz = null
 }) {
-    const hasScore = quizScore && quizScore.completed;
+    const isQuizDone = !!(quizScore && quizScore.completed);
+    const isQuizInProgress = !isQuizDone && quizProgress && quizProgress.hasStarted && quizProgress.answeredCount > 0;
+
+    // Calculate Chapter Progress: Lesson (50%) + Quiz (50%)
+    let masteryPercent = 0;
+    if (isLessonRead) masteryPercent += 50;
+    if (isQuizDone) masteryPercent += 50;
 
     const navigateTo = (path) => {
         window.location.hash = path;
@@ -74,7 +81,7 @@ function ChapterCard({
                     {chapter.isReady ? 'Ready' : 'Planned'}
                 </div>
 
-                {/* Left Badges Group: Lesson Read & Quiz Score */}
+                {/* Left Badges Group: Lesson Read & Quiz Progress */}
                 <div style={{
                     position: 'absolute',
                     top: '10px',
@@ -104,8 +111,8 @@ function ChapterCard({
                         </div>
                     )}
 
-                    {/* Quiz Score Badge if completed */}
-                    {hasScore && (
+                    {/* Quiz Completed Badge */}
+                    {isQuizDone && (
                         <div style={{
                             padding: '3px 8px',
                             borderRadius: '20px',
@@ -122,6 +129,27 @@ function ChapterCard({
                         }}>
                             <span>{quizScore.percent >= 80 ? '⭐' : '📝'}</span>
                             <span>Quiz: {quizScore.score}/{quizScore.total}</span>
+                        </div>
+                    )}
+
+                    {/* Quiz In-Progress Badge */}
+                    {isQuizInProgress && (
+                        <div style={{
+                            padding: '3px 8px',
+                            borderRadius: '20px',
+                            fontSize: '10.5px',
+                            fontWeight: '600',
+                            background: 'rgba(56, 139, 253, 0.9)',
+                            color: '#ffffff',
+                            backdropFilter: 'blur(4px)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            width: 'fit-content'
+                        }}>
+                            <span>📝</span>
+                            <span>Quiz: {quizProgress.answeredCount}/{quizProgress.total} In Progress</span>
                         </div>
                     )}
                 </div>
@@ -144,10 +172,30 @@ function ChapterCard({
 
                 {/* Concept Tags */}
                 {chapter.concepts && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
                         {chapter.concepts.map(concept => (
                             <code key={concept}>{concept}</code>
                         ))}
+                    </div>
+                )}
+
+                {/* Chapter Mastery Progress Bar (if started) */}
+                {chapter.isReady && (masteryPercent > 0 || isQuizInProgress) && (
+                    <div style={{ marginBottom: '16px', background: '#0d1117', padding: '10px 12px', borderRadius: '8px', border: '1px solid #21262d' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#8b949e', marginBottom: '6px' }}>
+                            <span>Chapter Mastery</span>
+                            <span style={{ fontWeight: '700', color: masteryPercent === 100 ? '#3fb950' : '#58a6ff' }}>
+                                {masteryPercent === 100 ? '100% Mastered ✓' : `${masteryPercent}% Complete`}
+                            </span>
+                        </div>
+                        <div style={{ height: '5px', background: '#21262d', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{
+                                width: `${masteryPercent}%`,
+                                height: '100%',
+                                background: masteryPercent === 100 ? '#3fb950' : 'linear-gradient(90deg, #58a6ff, #3fb950)',
+                                transition: 'width 0.3s ease'
+                            }}></div>
+                        </div>
                     </div>
                 )}
 
@@ -200,9 +248,9 @@ function ChapterCard({
                                 onClick={() => onOpenQuiz && onOpenQuiz(chapter)}
                                 style={{
                                     padding: '8px 12px',
-                                    background: hasScore ? 'rgba(56, 139, 253, 0.15)' : '#161b22',
-                                    color: hasScore ? '#58a6ff' : '#c9d1d9',
-                                    border: hasScore ? '1px solid rgba(88, 166, 255, 0.4)' : '1px solid #30363d',
+                                    background: isQuizDone ? 'rgba(56, 139, 253, 0.15)' : isQuizInProgress ? 'rgba(227, 179, 65, 0.15)' : '#161b22',
+                                    color: isQuizDone ? '#58a6ff' : isQuizInProgress ? '#d29922' : '#c9d1d9',
+                                    border: isQuizDone ? '1px solid rgba(88, 166, 255, 0.4)' : isQuizInProgress ? '1px solid rgba(227, 179, 65, 0.4)' : '1px solid #30363d',
                                     borderRadius: '6px',
                                     fontSize: '12px',
                                     fontWeight: '600',
@@ -210,9 +258,13 @@ function ChapterCard({
                                     transition: 'all 0.15s ease'
                                 }}
                                 onMouseEnter={e => e.currentTarget.style.background = '#21262d'}
-                                onMouseLeave={e => e.currentTarget.style.background = hasScore ? 'rgba(56, 139, 253, 0.15)' : '#161b22'}
+                                onMouseLeave={e => e.currentTarget.style.background = isQuizDone ? 'rgba(56, 139, 253, 0.15)' : isQuizInProgress ? 'rgba(227, 179, 65, 0.15)' : '#161b22'}
                             >
-                                {hasScore ? `🎯 Retake (${quizScore.score}/${quizScore.total})` : '❓ Take Quiz'}
+                                {isQuizDone
+                                    ? `🎯 Retake (${quizScore.score}/${quizScore.total})`
+                                    : isQuizInProgress
+                                    ? `▶ Resume (${quizProgress.answeredCount}/${quizProgress.total})`
+                                    : '❓ Take Quiz'}
                             </button>
                         </div>
                     </div>

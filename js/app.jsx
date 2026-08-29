@@ -1,6 +1,6 @@
 /**
  * Master React SPA Application & Hash Router
- * Handles routing, bookmarks, browser history, global score state, lesson completion tracking, and modal readers.
+ * Handles routing, bookmarks, browser history, global score state, quiz in-progress tracking, lesson completion tracking, and modal readers.
  */
 
 const { useState, useEffect, useMemo, useCallback } = React;
@@ -12,6 +12,9 @@ function App() {
     const [quizScores, setQuizScores] = useState(() => {
         return (typeof getSavedQuizScores === 'function') ? getSavedQuizScores() : {};
     });
+    const [quizProgresses, setQuizProgresses] = useState(() => {
+        return (typeof getAllQuizProgresses === 'function') ? getAllQuizProgresses() : {};
+    });
     const [completedLessons, setCompletedLessons] = useState(() => {
         return (typeof getCompletedLessons === 'function') ? getCompletedLessons() : {};
     });
@@ -20,10 +23,13 @@ function App() {
     const [activeLessonModal, setActiveLessonModal] = useState(null);
     const [activeQuizModal, setActiveQuizModal] = useState(null);
 
-    // Refresh quiz scores from storage
+    // Refresh quiz scores and in-progress states from storage
     const refreshScores = useCallback(() => {
         if (typeof getSavedQuizScores === 'function') {
             setQuizScores(getSavedQuizScores());
+        }
+        if (typeof getAllQuizProgresses === 'function') {
+            setQuizProgresses(getAllQuizProgresses());
         }
     }, []);
 
@@ -36,12 +42,13 @@ function App() {
     useEffect(() => {
         const handleHashChange = () => {
             setCurrentRoute(window.location.hash || '#/');
+            refreshScores();
             window.scrollTo(0, 0);
         };
 
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
-    }, []);
+    }, [refreshScores]);
 
     // Route Parser
     const route = useMemo(() => {
@@ -81,9 +88,21 @@ function App() {
         });
     }, [selectedCategory, searchQuery]);
 
-    const readyChaptersCount = CHAPTERS_REGISTRY.filter(c => c.isReady).length;
+    const readyChapters = useMemo(() => CHAPTERS_REGISTRY.filter(c => c.isReady), []);
+    const readyChaptersCount = readyChapters.length;
     const completedQuizzesCount = Object.values(quizScores).filter(s => s && s.completed).length;
     const completedLessonsCount = Object.values(completedLessons).filter(Boolean).length;
+
+    // Calculate Overall Course Progress
+    const overallProgressPercent = useMemo(() => {
+        if (readyChaptersCount === 0) return 0;
+        let totalPoints = 0;
+        readyChapters.forEach(c => {
+            if (completedLessons[c.number]) totalPoints += 50;
+            if (quizScores[c.number]?.completed) totalPoints += 50;
+        });
+        return Math.round(totalPoints / readyChaptersCount);
+    }, [readyChapters, readyChaptersCount, completedLessons, quizScores]);
 
     // View 1: Chapter Playground
     if (route.view === 'chapter' && route.subView === 'playground') {
@@ -179,7 +198,7 @@ function App() {
     return (
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 20px' }}>
             {/* Header Banner */}
-            <header style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <header style={{ textAlign: 'center', marginBottom: '36px' }}>
                 <div style={{
                     display: 'inline-block',
                     padding: '4px 12px',
@@ -213,46 +232,81 @@ function App() {
                     A hands-on journey from the fundamentals of GPU parallelism and coordinate spaces to advanced procedural noise, distance fields, and generative animations.
                 </p>
 
-                {/* Quick Stats & Syllabus Action */}
+                {/* Quick Stats & Overall Mastery Progress */}
                 <div style={{
                     display: 'flex',
-                    justifyContent: 'center',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '14px'
+                    gap: '16px'
                 }}>
+                    {/* Stat Badges */}
                     <div style={{
-                        display: 'flex', alignItems: 'center', gap: '8px', background: '#161b22',
-                        padding: '6px 14px', borderRadius: '8px', border: '1px solid #30363d', fontSize: '13px'
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '12px'
                     }}>
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3fb950', display: 'inline-block' }}></span>
-                        <span><strong>{readyChaptersCount}</strong> Playgrounds Ready</span>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '8px', background: '#161b22',
+                            padding: '6px 14px', borderRadius: '8px', border: '1px solid #30363d', fontSize: '13px'
+                        }}>
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3fb950', display: 'inline-block' }}></span>
+                            <span><strong>{readyChaptersCount}</strong> Playgrounds Ready</span>
+                        </div>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '8px', background: '#161b22',
+                            padding: '6px 14px', borderRadius: '8px', border: '1px solid #30363d', fontSize: '13px'
+                        }}>
+                            <span>📖 <strong>{completedLessonsCount} / {readyChaptersCount}</strong> Lessons Read</span>
+                        </div>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '8px', background: '#161b22',
+                            padding: '6px 14px', borderRadius: '8px', border: '1px solid #30363d', fontSize: '13px'
+                        }}>
+                            <span>🎯 <strong>{completedQuizzesCount} / {readyChaptersCount}</strong> Quizzes Passed</span>
+                        </div>
+                        <button
+                            onClick={() => window.location.hash = '#/syllabus'}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#238636',
+                                color: '#ffffff', border: '1px solid rgba(240,246,252,0.1)', padding: '7px 16px',
+                                borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#2ea043'}
+                            onMouseLeave={e => e.currentTarget.style.background = '#238636'}
+                        >
+                            📋 View Full Syllabus
+                        </button>
                     </div>
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: '8px', background: '#161b22',
-                        padding: '6px 14px', borderRadius: '8px', border: '1px solid #30363d', fontSize: '13px'
-                    }}>
-                        <span>📖 <strong>{completedLessonsCount} / {readyChaptersCount}</strong> Lessons Read</span>
-                    </div>
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: '8px', background: '#161b22',
-                        padding: '6px 14px', borderRadius: '8px', border: '1px solid #30363d', fontSize: '13px'
-                    }}>
-                        <span>🎯 <strong>{completedQuizzesCount} / {readyChaptersCount}</strong> Quizzes Passed</span>
-                    </div>
-                    <button
-                        onClick={() => window.location.hash = '#/syllabus'}
-                        style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#238636',
-                            color: '#ffffff', border: '1px solid rgba(240,246,252,0.1)', padding: '7px 16px',
-                            borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-                            transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = '#2ea043'}
-                        onMouseLeave={e => e.currentTarget.style.background = '#238636'}
-                    >
-                        📋 View Full Syllabus
-                    </button>
+
+                    {/* Overall Course Progress Bar */}
+                    {overallProgressPercent > 0 && (
+                        <div style={{
+                            width: '100%',
+                            maxWidth: '460px',
+                            background: '#161b22',
+                            padding: '10px 16px',
+                            borderRadius: '10px',
+                            border: '1px solid #30363d'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#8b949e', marginBottom: '6px' }}>
+                                <span>Overall Course Progress</span>
+                                <strong style={{ color: overallProgressPercent === 100 ? '#3fb950' : '#58a6ff' }}>
+                                    {overallProgressPercent}% Complete
+                                </strong>
+                            </div>
+                            <div style={{ height: '6px', background: '#0d1117', borderRadius: '3px', overflow: 'hidden' }}>
+                                <div style={{
+                                    width: `${overallProgressPercent}%`,
+                                    height: '100%',
+                                    background: overallProgressPercent === 100 ? '#3fb950' : 'linear-gradient(90deg, #58a6ff, #3fb950)',
+                                    transition: 'width 0.4s ease'
+                                }}></div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -333,6 +387,7 @@ function App() {
                         key={chapter.id}
                         chapter={chapter}
                         quizScore={quizScores[chapter.number]}
+                        quizProgress={quizProgresses[chapter.number]}
                         isLessonRead={!!completedLessons[chapter.number]}
                         onOpenLesson={ch => setActiveLessonModal(ch)}
                         onOpenQuiz={ch => setActiveQuizModal(ch)}

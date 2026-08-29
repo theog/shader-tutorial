@@ -416,3 +416,28 @@ function saveLessonCompletedToStorage(chapterNum, isCompleted = true) {
     }
 }
 
+function getAllQuizProgresses() {
+    const result = {};
+    if (typeof QUIZ_DATABASE === 'undefined') return result;
+    const scores = getSavedQuizScores();
+
+    Object.keys(QUIZ_DATABASE).forEach(chNum => {
+        const qData = QUIZ_DATABASE[chNum];
+        const total = qData.questions?.length || 0;
+        const score = scores[chNum];
+        const inProgress = getSavedQuizProgress(chNum);
+        const answeredCount = inProgress?.answers ? Object.keys(inProgress.answers).length : 0;
+
+        result[chNum] = {
+            total,
+            answeredCount,
+            hasStarted: answeredCount > 0,
+            isCompleted: !!(score && score.completed),
+            score: score || null
+        };
+    });
+
+    return result;
+}
+
+
