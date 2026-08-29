@@ -1,6 +1,6 @@
 /**
  * Reusable Interactive Quiz Runner Component
- * Step-by-step quiz engine with interactive choice cards, code challenges, explanations, and localStorage persistence.
+ * Step-by-step quiz engine with interactive choice cards, live editable code challenges with real-time WebGL viewports, explanations, and localStorage persistence.
  */
 
 function QuizRunner({
@@ -43,6 +43,11 @@ function QuizRunner({
         const saved = (typeof getSavedQuizProgress === 'function') ? getSavedQuizProgress(chapterNum) : null;
         return saved?.answers || {};
     });
+    const [userCodes, setUserCodes] = React.useState(() => {
+        const saved = (typeof getSavedQuizProgress === 'function') ? getSavedQuizProgress(chapterNum) : null;
+        return saved?.userCodes || {};
+    });
+    const [compileErrors, setCompileErrors] = React.useState({});
     const [hintRevealed, setHintRevealed] = React.useState({});
     const [solutionRevealed, setSolutionRevealed] = React.useState({});
     const [showSummary, setShowSummary] = React.useState(false);
@@ -50,9 +55,9 @@ function QuizRunner({
     // Save in-progress answers to localStorage
     React.useEffect(() => {
         if (typeof saveQuizProgressToStorage === 'function') {
-            saveQuizProgressToStorage(chapterNum, { answers, currentIdx });
+            saveQuizProgressToStorage(chapterNum, { answers, userCodes, currentIdx });
         }
-    }, [answers, currentIdx, chapterNum]);
+    }, [answers, userCodes, currentIdx, chapterNum]);
 
     const currentQ = questions[currentIdx];
     const currentAnswer = answers[currentQ.id];
@@ -105,6 +110,8 @@ function QuizRunner({
             clearQuizProgressFromStorage(chapterNum);
         }
         setAnswers({});
+        setUserCodes({});
+        setCompileErrors({});
         setHintRevealed({});
         setSolutionRevealed({});
         setCurrentIdx(0);
@@ -120,7 +127,7 @@ function QuizRunner({
             border: '1px solid #30363d',
             borderRadius: '14px',
             width: '100%',
-            maxWidth: isModal ? '840px' : '900px',
+            maxWidth: isModal ? '980px' : '1020px',
             maxHeight: isModal ? '92vh' : 'none',
             display: 'flex',
             flexDirection: 'column',
@@ -370,56 +377,126 @@ function QuizRunner({
                             </div>
                         )}
 
-                        {/* Code Challenge */}
+                        {/* Code Challenge: Interactive Split Editor & WebGL Output */}
                         {currentQ.type === 'code_challenge' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                <div style={{ background: '#161b22', padding: '12px 16px', borderRadius: '8px', border: '1px solid #30363d' }}>
-                                    <div style={{ fontSize: '11px', color: '#8b949e', marginBottom: '4px', textTransform: 'uppercase' }}>Starter Template:</div>
-                                    <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '12px', color: '#79c0ff', lineHeight: '1.5' }}>
-                                        <code>{currentQ.starterCode}</code>
-                                    </pre>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                {/* Split Code Editor & Live Canvas */}
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'minmax(320px, 1.2fr) minmax(280px, 0.8fr)',
+                                    gap: '14px',
+                                    alignItems: 'stretch'
+                                }}>
+                                    {/* Left: Interactive GLSL Code Editor */}
+                                    <div style={{ minHeight: '280px', display: 'flex', flexDirection: 'column' }}>
+                                        <GLSLEditor
+                                            code={userCodes[currentQ.id] !== undefined ? userCodes[currentQ.id] : currentQ.starterCode}
+                                            onChange={(val) => {
+                                                setUserCodes(prev => ({ ...prev, [currentQ.id]: val }));
+                                                setCompileErrors(prev => ({ ...prev, [currentQ.id]: null }));
+                                                setAnswers(prev => ({ ...prev, [currentQ.id]: 'user_edited' }));
+                                            }}
+                                            error={compileErrors[currentQ.id]}
+                                            onReset={() => {
+                                                setUserCodes(prev => ({ ...prev, [currentQ.id]: currentQ.starterCode }));
+                                                setCompileErrors(prev => ({ ...prev, [currentQ.id]: null }));
+                                            }}
+                                            title="Your GLSL Code (Editable)"
+                                            height="280px"
+                                        />
+                                    </div>
+
+                                    {/* Right: Real-time WebGL Output Viewport */}
+                                    <div style={{
+                                        background: '#0d1117',
+                                        border: '1px solid #30363d',
+                                        borderRadius: '10px',
+                                        overflow: 'hidden',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        minHeight: '280px'
+                                    }}>
+                                        <div style={{
+                                            padding: '8px 14px',
+                                            background: '#161b22',
+                                            borderBottom: '1px solid #30363d',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            fontSize: '12px',
+                                            fontWeight: '600',
+                                            color: '#c9d1d9'
+                                        }}>
+                                            <span>📺 Live Shader Viewport</span>
+                                            <span style={{
+                                                fontSize: '11px',
+                                                color: compileErrors[currentQ.id] ? '#f85149' : '#3fb950'
+                                            }}>
+                                                {compileErrors[currentQ.id] ? '● Compilation Error' : '● Live Rendering'}
+                                            </span>
+                                        </div>
+                                        <div style={{ flex: '1', position: 'relative', background: '#090d13', minHeight: '230px' }}>
+                                            <WebGLCanvas
+                                                fragmentSource={userCodes[currentQ.id] !== undefined ? userCodes[currentQ.id] : currentQ.starterCode}
+                                                onError={(err) => setCompileErrors(prev => ({ ...prev, [currentQ.id]: err }))}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {currentQ.hint && (
-                                    <div>
+                                {/* Hints & Solution Actions */}
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    {currentQ.hint && (
+                                        <div>
+                                            <button
+                                                onClick={() => setHintRevealed(prev => ({ ...prev, [currentQ.id]: !prev[currentQ.id] }))}
+                                                style={{
+                                                    background: '#21262d', border: '1px solid #30363d', color: '#e3b341', fontSize: '12px',
+                                                    borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                                                }}
+                                            >
+                                                <span>💡</span> {hintRevealed[currentQ.id] ? 'Hide Hint' : 'Show Hint'}
+                                            </button>
+                                            {hintRevealed[currentQ.id] && (
+                                                <div style={{ marginTop: '8px', padding: '10px 14px', background: 'rgba(227, 179, 65, 0.1)', border: '1px solid rgba(227, 179, 65, 0.3)', borderRadius: '6px', fontSize: '13px', color: '#d29922' }}>
+                                                    {currentQ.hint}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {!solutionRevealed[currentQ.id] ? (
                                         <button
-                                            onClick={() => setHintRevealed(prev => ({ ...prev, [currentQ.id]: !prev[currentQ.id] }))}
+                                            onClick={handleRevealSolution}
                                             style={{
-                                                background: 'transparent', border: 'none', color: '#e3b341', fontSize: '13px',
-                                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0
+                                                padding: '8px 16px', background: '#21262d', color: '#58a6ff',
+                                                border: '1px solid #30363d', borderRadius: '6px', fontWeight: '600',
+                                                fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
                                             }}
                                         >
-                                            <span>💡</span> {hintRevealed[currentQ.id] ? 'Hide Hint' : 'Show Hint'}
+                                            <span>👁️</span> Reveal Solution & Complete Challenge
                                         </button>
-                                        {hintRevealed[currentQ.id] && (
-                                            <div style={{ marginTop: '8px', padding: '10px 14px', background: 'rgba(227, 179, 65, 0.1)', border: '1px solid rgba(227, 179, 65, 0.3)', borderRadius: '6px', fontSize: '13px', color: '#d29922' }}>
-                                                {currentQ.hint}
+                                    ) : (
+                                        <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '14px', marginTop: '10px' }}>
+                                            <div style={{ background: '#090d13', border: '1px solid #3fb950', borderRadius: '10px', padding: '12px', overflow: 'hidden' }}>
+                                                <div style={{ fontSize: '12px', color: '#3fb950', fontWeight: '600', marginBottom: '6px' }}>
+                                                    ✓ Reference Solution Code:
+                                                </div>
+                                                <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '11.5px', color: '#3fb950', lineHeight: '1.5', maxHeight: '180px', overflowY: 'auto' }}>
+                                                    <code>{currentQ.solutionCode}</code>
+                                                </pre>
                                             </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {!solutionRevealed[currentQ.id] ? (
-                                    <button
-                                        onClick={handleRevealSolution}
-                                        style={{
-                                            padding: '10px 16px', background: '#21262d', color: '#58a6ff',
-                                            border: '1px solid #30363d', borderRadius: '8px', fontWeight: '600',
-                                            fontSize: '13px', cursor: 'pointer', alignSelf: 'flex-start'
-                                        }}
-                                    >
-                                        👁️ Reveal Reference Solution & Complete
-                                    </button>
-                                ) : (
-                                    <div style={{ background: '#090d13', border: '1px solid #3fb950', borderRadius: '8px', padding: '14px' }}>
-                                        <div style={{ fontSize: '12px', color: '#3fb950', fontWeight: '600', marginBottom: '8px' }}>
-                                            ✓ Reference Solution:
+                                            <div style={{ background: '#090d13', border: '1px solid #3fb950', borderRadius: '10px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                                                <div style={{ padding: '6px 12px', background: '#161b22', borderBottom: '1px solid #30363d', fontSize: '11px', color: '#3fb950', fontWeight: '600' }}>
+                                                    Expected Reference Output:
+                                                </div>
+                                                <div style={{ flex: '1', minHeight: '160px', position: 'relative' }}>
+                                                    <WebGLCanvas fragmentSource={currentQ.solutionCode} />
+                                                </div>
+                                            </div>
                                         </div>
-                                        <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '12px', color: '#3fb950', lineHeight: '1.5' }}>
-                                            <code>{currentQ.solutionCode}</code>
-                                        </pre>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         )}
 
